@@ -1,0 +1,63 @@
+---
+title: "Data Cleaning"
+output: pdf_document
+---
+
+# Introduction
+This document outlines the data cleaning steps for the project dataset.
+
+## Dependency Setup
+```{r Dependency Setup, inlcude = TRUE}
+
+if (!require("here")) install.packages("here")
+library(here)
+
+# Set current working directory to .rmd file location
+setwd(here::here())
+
+#Print current worlking directory in case not connected to .Rproj file
+print(getwd())
+
+# Define the path to the .renv lockfile within the 'renv' folder
+renv_lockfile <- file.path(getwd(), "renv.lock")
+
+#Restore packages from renv lock file
+if (!require("renv")) install.packages("renv")
+renv::restore()
+
+# Use the p_load function to install and load any desired packages that may not 
+# have been in the renv.lock file. Note, if the packages were already in the 
+# renv.lock file, that is okay. `p_load` will not change version number
+
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(renv, rmarkdown,  knitr, tidyverse, reshape2, 
+               gridExtra, broom, car, caret, Metrics)
+
+# Update the renv lock file
+renv::snapshot()
+```
+
+# Identify Missing Values
+```{r}
+# Code to identify missing values
+```
+
+# Handling Missing Values
+```{r}
+# Code to handle missing values (e.g., imputation)
+```
+
+# Removing Duplicates
+```{r}
+# Code to remove duplicate entries
+```
+
+# Correcting Data Types
+```{r}
+# Code to correct data types where necessary
+```
+
+# Summary of Cleaned Data
+```{r}
+# Code to summarize the cleaned data
+```
