@@ -12,16 +12,16 @@ This document outlines the data cleaning steps for the project dataset.
 if (!require("here")) install.packages("here")
 library(here)
 
-# Set current working directory to .rmd file location
+# Set current working directory to file location
 setwd(here::here())
 
-#Print current worlking directory in case not connected to .Rproj file
+#Print current working directory in case not connected to .Rproj file
 print(getwd())
 
 # Define the path to the .renv lockfile within the 'renv' folder
 renv_lockfile <- file.path(getwd(), "renv.lock")
 
-#Restore packages from renv lock file
+# Activate and restore packages from renv lock file
 if (!require("renv")) install.packages("renv")
 renv::restore()
 
