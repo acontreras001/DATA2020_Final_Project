@@ -1,0 +1,229 @@
+---
+title: "Data Cleaning"
+output: pdf_document
+---
+
+# Introduction
+This document outlines the data cleaning steps for the project dataset.
+
+## Dependency Setup
+```{r Dependency Setup, inlcude = TRUE}
+
+if (!require("here")) install.packages("here")
+library(here)
+
+# Set current working directory to file location
+setwd(here::here())
+
+#Print current working directory in case not connected to .Rproj file
+print(getwd())
+
+# Define the path to the .renv lockfile within the 'renv' folder
+renv_lockfile <- file.path(getwd(), "renv.lock")
+
+# Activate and restore packages from renv lock file
+if (!require("renv")) install.packages("renv")
+renv::restore()
+
+# Use the p_load function to install and load any desired packages that may not 
+# have been in the renv.lock file. Note, if the packages were already in the 
+# renv.lock file, that is okay. `p_load` will not change version number
+
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(renv, rmarkdown,  knitr, tidyverse, reshape2, haven, xtable
+               gridExtra, broom, car, caret, Metrics)
+
+# Update the renv lock file
+renv::snapshot()
+```
+
+# Data Loading
+```{r}
+
+# load data
+wave1 <- read_dta("data/raw/FF_wave1_2020v2.dta")
+wave2 <- read_dta("data/raw/FF_wave2_2020v2.dta")
+wave3 <- read_dta("data/raw/FF_wave3_2020v2.dta")
+wave4 <- read_dta("data/raw/FF_wave4_2020v2.dta")
+wave5 <- read_dta("data/raw/FF_wave5_2020v2.dta")
+wave6 <- read_dta("data/raw/FF_wave6_2020v2.dta")
+
+```
+
+# Load Custom Functions
+```{r}
+# Load custom functions
+source("R_files/custom_functions.R")
+```
+
+# Identify Missing Values
+```{r}
+# Code to identify missing values
+
+#Identify missing data columns
+wave1_missing_data_columns <- find_missing_data_columns(wave1)
+wave2_missing_data_columns <- find_missing_data_columns(wave2)
+wave3_missing_data_columns <- find_missing_data_columns(wave3)
+wave4_missing_data_columns <- find_missing_data_columns(wave4)
+wave5_missing_data_columns <- find_missing_data_columns(wave5)
+wave6_missing_data_columns <- find_missing_data_columns(wave6)
+
+```
+
+The following variables in wave1 contain only missing/NA values: `r wave1_missing_data_columns` 
+The following variables in wave2 contain only missing/NA values: `r wave2_missing_data_columns` 
+The following variables in wave3 contain only missing/NA values: `r wave3_missing_data_columns` 
+The following variables in wave4 contain only missing/NA values: `r wave4_missing_data_columns` 
+The following variables in wave5 contain only missing/NA values: `r wave5_missing_data_columns` 
+The following variables in wave6 contain only missing/NA values: `r wave6_missing_data_columns` 
+
+
+# Handling Missing Values
+```{r}
+# Code to handle missing values (e.g., imputation)
+
+# Remove missing data columns
+remove_missing_data_columns(wave1)
+remove_missing_data_columns(wave2)
+remove_missing_data_columns(wave3)
+remove_missing_data_columns(wave4)
+remove_missing_data_columns(wave5)
+remove_missing_data_columns(wave6)
+
+```
+
+# Removing Duplicates
+```{r}
+# Code to remove duplicate entries
+
+#Identify homogeneous data columns
+wave1_homogeneous_data_columns <- find_homogeneous_data_columns(wave1)
+wave2_homogeneous_data_columns <- find_homogeneous_data_columns(wave2)
+wave3_homogeneous_data_columns <- find_homogeneous_data_columns(wave3)
+wave4_homogeneous_data_columns <- find_homogeneous_data_columns(wave4)
+wave5_homogeneous_data_columns <- find_homogeneous_data_columns(wave5)
+wave6_homogeneous_data_columns <- find_homogeneous_data_columns(wave6)
+
+```
+
+The following variables in wave1 contain the same value in every cell: `r wave1_homogeneous_data_columns`
+The following variables in wave2 contain the same value in every cell: `r wave2_homogeneous_data_columns`
+The following variables in wave3 contain the same value in every cell: `r wave3_homogeneous_data_columns`
+The following variables in wave4 contain the same value in every cell: `r wave4_homogeneous_data_columns`
+The following variables in wave5 contain the same value in every cell: `r wave5_homogeneous_data_columns`
+The following variables in wave6 contain the same value in every cell: `r wave6_homogeneous_data_columns`
+
+```{r}
+
+# Remove missing data columns
+remove_homogeneous_data_columns(wave1)
+remove_homogeneous_data_columns(wave2)
+remove_homogeneous_data_columns(wave3)
+remove_homogeneous_data_columns(wave4)
+remove_homogeneous_data_columns(wave5)
+remove_homogeneous_data_columns(wave6)
+
+```
+
+# Remove Duplicate Rows
+```{r}
+
+# Remove duplice rows
+wave1 <- unique(wave1)
+wave2 <- unique(wave2)
+wave3 <- unique(wave3)
+wave4 <- unique(wave4)
+wave5 <- unique(wave5)
+wave6 <- unique(wave6)
+
+```
+
+# Merge data long ways by CommonID
+```{r}
+
+# Inner Join - Returns only the rows that have matching values in all data frames.
+inner_joined_df <- wave1 %>%
+  inner_join(wave2, by = "ID") %>%
+  inner_join(wave3, by = "ID") %>%
+  inner_join(wave4, by = "ID") %>%
+  inner_join(wave5, by = "ID") %>%
+  inner_join(wave6, by = "ID")
+
+# Left Join - Keeps all rows from wave1 and adds matching rows from other waves
+left_joined_df <- wave1 %>%
+  left_join(wave2, by = "ID") %>%
+  left_join(wave3, by = "ID") %>%
+  left_join(wave4, by = "ID") %>%
+  left_join(wave5, by = "ID") %>%
+  left_join(wave6, by = "ID")
+
+# Full Join - Returns all rows when there is a match in either the left or right dataframes
+full_joined_df <- wave1 %>%
+  full_join(wave2, by = "ID") %>%
+  full_join(wave3, by = "ID") %>%
+  full_join(wave4, by = "ID") %>%
+  full_join(wave5, by = "ID") %>%
+  full_join(wave6, by = "ID")
+
+# Row bind - Combine the dataframes while focusing on common variables
+row_bind_df <- bind_rows(wave1, wave2, wave3, wave4, wave5, wave6)
+
+```
+
+# Data Type Correction
+```{r}
+
+vars_to_factor <- c("var1", "var2", "var3")
+vars_to_numeric <- c("var1", "var2", "var3")
+vars_to_character <- c("var1", "var2", "var3")
+
+df <- df %>%
+  mutate(
+    across(all_of(vars_to_factor), as.factor),
+    across(all_of(vars_to_numeric), as.numeric),
+    across(all_of(vars_to_character), as.character)
+  )
+
+```
+
+#Data Transformation
+```{r}
+
+# Create vectors of variables that need to be transformed
+vars_to_normalize <- c("var1", "var2", "var3")
+vars_to_standardize <- c("var1", "var2", "var3")
+vars_to_logarithmize <- c("var1", "var2", "var3")
+vars_to_min_max <- c("var1", "var2", "var3")
+
+# Applying transformations
+df <- df %>%
+  mutate(
+    across(all_of(vars_to_normalize), normalize),
+    across(all_of(vars_to_standardize), standardize),
+    across(all_of(vars_to_logarithmize), logarithmize),
+    across(all_of(vars_to_min_max), min_max)
+  )
+
+```
+
+# Select only Desired Variables
+```{r}
+# Create a vector of desired variables
+desired_vars <- c("var1", "var2", "var3")
+
+# Select only desired vars
+df <- df %>% 
+  select(all_of(desired_vars))
+
+# Drop NAs 
+df <- df %>% 
+  drop_na()
+
+```
+
+# Save Filtered Data
+```{r}
+# Save filtered dataframe
+save(df_filtered, file = "data/processed/df_filtered.rda")
+
+```

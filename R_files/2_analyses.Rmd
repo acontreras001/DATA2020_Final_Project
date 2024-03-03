@@ -1,0 +1,197 @@
+---
+title: "Data Analysis"
+output: pdf_document
+---
+
+# Introduction
+This document provides an overview of the analyses conducted on the project dataset.
+
+## Dependency Setup
+```{r Dependency Setup, inlcude = TRUE}
+
+if (!require("here")) install.packages("here")
+library(here)
+
+# Set current working directory to file location
+setwd(here::here())
+
+#Print current working directory in case not connected to .Rproj file
+print(getwd())
+
+# Define the path to the .renv lockfile within the 'renv' folder
+renv_lockfile <- file.path(getwd(), "renv.lock")
+
+# Activate and restore packages from renv lock file
+if (!require("renv")) install.packages("renv")
+renv::restore()
+
+# Use the p_load function to install and load any desired packages that may not 
+# have been in the renv.lock file. Note, if the packages were already in the 
+# renv.lock file, that is okay. `p_load` will not change version number
+
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(renv, rmarkdown,  knitr, tidyverse, reshape2, xtable, haven
+               gridExtra, broom, car, caret, Metrics)
+
+# Update the renv lock file
+renv::snapshot()
+```
+
+## Load Data
+```{r}
+# Load the RData file back into R
+df <- load("data/processed/df_filtered.rda")
+```
+
+## Data Overview
+```{r}
+# Code to display basic information about the dataset
+
+
+```
+
+## Descriptive Statistics
+```{r}
+# Code for descriptive statistics
+
+
+```
+
+## Hypothesis Testing
+```{r}
+# Code for conducting hypothesis tests
+
+
+```
+
+# Predictive Modeling
+
+## Linear Model
+```{r}
+
+# Create vectors of dependent and independent variables
+dep_var <- "var1"
+indep_vars <- c("var2", "var3", "var4", "var5", "var6")
+  
+# Construct the formula as a string and then convert it to a formula object
+lm_formula <- as.formula(paste(dep_var, "~", paste(indep_vars, collapse = " + ")))
+
+# Now use this formula in the lm() function
+linear_model <- lm(formula = lm_formula, data = df)
+
+```
+
+```{r}
+
+# View the summary of the model
+summary(linear_model)
+
+# Print the table in LaTeX code
+lm_summary <- summary(linear_model)
+latex_table <- xtable(lm_summary)
+print(latex_table, type = "latex", comment = FALSE)
+
+```
+
+```{r}
+
+# Residuals of linear model
+residuals <- resid(linear_model)
+
+# Create a Q-Q plot
+qq_plot <- ggplot() + 
+  stat_qq(aes(sample = residuals)) + 
+  geom_abline(slope = 1, intercept = 0) + 
+  theme_grey() +
+  ggtitle("Q-Q Plot of Model Residuals") + 
+  xlab("Theoretical Quantiles") + 
+  ylab("Sample Quantiles")
+
+# Display the Q-Q plot
+print(qq_plot)
+
+# Save the Q-Q plot
+ggsave(filename = "outputs/analyses/qq_plot.png", plot = last_plot(), 
+       width = 20, height = 16, units = "cm")
+
+```
+
+## General Linear Model
+```{r}
+
+# Create vectors of dependent and independent variables
+dep_var <- "var1"
+indep_vars <- c("var2", "var3", "var4", "var5", "var6")
+glm_vars <- dep_var + indep_vars  
+
+glm_df <- df %>%
+  select(select(all_of(glm_vars))) %>% 
+  drop_na()
+
+# Construct the formula as a string and then convert it to a formula object
+glm_formula <- as.formula(paste(dep_var, "~", paste(indep_vars, collapse = " + ")))
+
+# Now use this formula in the lm() function
+general_linear_model <- glm(formula = glm_formula, family = binomial, data = glm_df)
+
+# View the summary of the model
+summary(general_linear_model)
+
+```
+
+```{r}
+
+# Residuals of general linear model
+residuals <- resid(general_linear_model)
+
+# View the summary of the model
+summary(general_linear_model)
+
+# Print the table in LaTeX code
+glm_summary <- summary(general_linear_model)
+latex_table <- xtable(glm_summary)
+print(latex_table, type = "latex", comment = FALSE)
+
+```
+
+```{r}
+
+#Extract predicted probabilities
+glm_df$predicted_prob <- predict(general_linear_model, type = "response")
+
+#Create bins for predicted probabilities
+glm_df$prob_bin <- cut(glm_df$predicted_prob, breaks = seq(0, 1, by = 0.03), include.lowest = TRUE)
+
+#Calculate Observed Proportions
+calibration_data <- glm_df %>%
+  group_by(prob_bin) %>%
+  summarise(Avg_Predicted = mean(predicted_prob),
+            Avg_Actual = mean(dep_var),
+            N = n(),
+            SE = sqrt(Avg_Actual * (1 - Avg_Actual) / N),
+            Lower_CI = Avg_Actual - 1.96 * SE,
+            Upper_CI = Avg_Actual + 1.96 * SE)
+
+#Plot the data
+callibration_plot <- ggplot(calibration_data, aes(x = Avg_Predicted, y = Avg_Actual)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = Lower_CI, ymax = Upper_CI), width = 0.02) +
+  xlim(0, .3) +
+  ylim(0, .3) +
+  labs(x = "Observed Proportion", 
+       y = "Expected Proportion", 
+       title = "Calibration Plot of General Linear Model of Dependent Variable") +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "red") +
+  theme_gray()
+
+#Save the plot
+ggsave(filename = "outputs/analyses/callibration_plot.png", plot = last_plot(), 
+       width = 20, height = 16, units = "cm")
+
+```
+
+## Results
+Discuss the results of the analyses, including any significant findings and implications.
+
+## Conclusion
+Summarize the main conclusions drawn from the analyses, including any recommendations for further research or practical applications.

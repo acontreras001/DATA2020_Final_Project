@@ -30,7 +30,7 @@ renv::restore()
 # renv.lock file, that is okay. `p_load` will not change version number
 
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(renv, rmarkdown,  knitr, tidyverse, reshape2, 
+pacman::p_load(renv, rmarkdown,  knitr, tidyverse, reshape2, haven, xtable
                gridExtra, broom, car, caret, Metrics)
 
 # Update the renv lock file
@@ -39,15 +39,35 @@ renv::snapshot()
 
 # Data Loading
 ```{r}
-# Code to load data
+
+# Load custom functions
+source("custom_functions.R")
+
+# load data
+wave1 <- read_dta("~/Desktop/DataSci/DATA2020-Spring2024/DATA2020_Final_Project/data/raw/FF_wave1_2020v2.dta")
+wave2 <- read_dta("~/Desktop/DataSci/DATA2020-Spring2024/DATA2020_Final_Project/data/raw/FF_wave2_2020v2.dta")
+wave3 <- read_dta("~/Desktop/DataSci/DATA2020-Spring2024/DATA2020_Final_Project/data/raw/FF_wave3_2020v2.dta")
+wave4 <- read_dta("~/Desktop/DataSci/DATA2020-Spring2024/DATA2020_Final_Project/data/raw/FF_wave4_2020v2.dta")
+wave5 <- read_dta("~/Desktop/DataSci/DATA2020-Spring2024/DATA2020_Final_Project/data/raw/FF_wave5_2020v2.dta")
+wave6 <- read_dta("~/Desktop/DataSci/DATA2020-Spring2024/DATA2020_Final_Project/data/raw/FF_wave6_2020v2.dta")
 ```
 
 # Summary Statistics
 ```{r}
 # Code to summarize the data
+
+
+
+
 ```
 
 # Data Visualization
 ```{r}
 # Code for data visualization
+
+
+
+
+
+
 ```
