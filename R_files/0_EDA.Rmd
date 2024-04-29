@@ -62,19 +62,30 @@ data <- merge(data, wave4, by = "idnum")
 data <- merge(data, wave5, by = "idnum")
 data <- merge(data, wave6, by = "idnum")
 
+
+
+#variable_names <- names(data)
+#selected_variables <- grep("^r3", variable_names, value = TRUE)
+#print(selected_variables)
+
 ```
 
 # Separate Variables into categories and filter
 ```{r}
 
 # Numeric Variables
-numeric_vars <- c("cf3age", "f3l1")
+numeric_vars <- c("cf3age", "cm3age", "f3l1")
 
 # Race variables of Respondent - variables are one hot encoded
-race_vars <- c("r3f13_0", "r3f13_1", "r3f13_2", "r3f13_3", "r3f13_4", "r3f13_5", "r3f13_9", "r3f14", "r3f15")
+
+race_vars_nonwave_3  <- c("f1h3", "f2g5", "f4h0c")
+race_vars_wave_3 <- c("r3f13_0", "r3f13_1", "r3f13_2", "r3f13_3", "r3f13_4", "r3f13_5", "r3f13_9")
+hispanic_wave_3 <- c("r3f14")
+
+race_vars <- c(race_vars_nonwave_3, race_vars_wave_3, hispanic_wave_3)
 
 # Binary Variables
-binary_vars <- c("f3e5a", "cf3marm", "cf3cohm", "m3i0i", "m3i0j")
+binary_vars <- c("cf3marm", "cf3cohm", "m3i0i", "m3i0j")
 
 # Ordinal variables 
 # Check on following variables --- ordinal_vars <- c("m3i0m", "f3i0l1", "m3i0l1", "f3i0m")
@@ -85,16 +96,130 @@ multi_categorical_vars <- c("f3e5", "f3i2", "m3c41", "f3c41", "m3i0d", "m3i0e", 
                              "f3i0d", "f3i0e", "f3i0f", "f3i0g", "f3i0h")
 
 # Create vector of desired variables - makes it easier to filter
-desired_vars <- c(numeric_vars, race_vars, binary_vars, ordinal_vars, multi_categorical_vars)
+desired_vars <- c(numeric_vars, race_vars, hispanic, binary_vars, ordinal_vars, multi_categorical_vars)
 
 # Filter out only the numeric variables
 data <- data %>% 
   select(all_of(desired_vars))
 
-# View the filtered dataset
-print(data)
+table(data$r3f13_0)
+
+
 
 ```
+
+
+```{r, Numeric Vars}
+# Display the structure of the dataset
+
+# Filter data to remove rows with negative values for age and income
+data <- data %>%
+  filter(if_all(all_of(numeric_vars), ~ . >= 0))
+
+# Summary statistics for numeric variables
+summary(select(data, all_of(numeric_vars)))
+
+```
+
+```{r}
+# New variables for race and Hispanic status
+data$Race_Category <- NA  # Initializes with NA
+data$Hispanic <- as.character(ifelse(data$r3f14 %in% c(-9, -3), NA, factor(data$r3f14, levels = c(0, 1), labels = c("No", "Yes"))))
+
+# Update race category logic to combine "Black" categories
+for (i in 1:nrow(data)) {
+  if (data$f1h3[i] %in% c(-9, -3)) {
+    idx <- which(data[i, race_vars_wave_3] == 1)
+    if (length(idx) > 0) {
+      data$Race_Category[i] <- c("Bi/Multiracial", "White", "Black", "American Indian or Alaska Native", "Asian", "Native Hawaiian or Other Pacific Islander", "Other")[idx]
+    } else {
+      data$Race_Category[i] <- "No Information"
+    }
+  } else {
+    data$Race_Category[i] <- switch(as.character(data$f1h3[i]),
+                                    `1` = "White",
+                                    `2` = "Black",
+                                    `3` = "Asian",
+                                    `4` = "American Indian",
+                                    `5` = "Other",
+                                    `101` = "Hispanic",
+                                    "No Information")
+  }
+}
+data$Race_Category[data$Race_Category == "Black or African American"] <- "Black"
+
+# Update Hispanic status based on better handling of source data
+data$Hispanic <- ifelse(data$r3f14 == -9 | data$r3f14 == -3, "No Information",
+                        ifelse(data$r3f14 == 1, "Yes", "No"))
+data$Hispanic <- factor(data$Hispanic, levels = c("No", "Yes", "No Information"))
+
+# Print to verify
+table(data$Race_Category)
+table(data$Hispanic)
+
+```
+
+
+```{r}
+# First, you'll create the contingency table
+data_table <- table(data$Race_Category, data$Hispanic)
+
+# Convert the table to a data frame
+data_frame <- as.data.frame.matrix(data_table)
+
+# Add a race category as a new column
+data_frame$Race_Category <- rownames(data_frame)
+
+# Filter out the 'No Information' category
+filtered_data <- data_frame[data_frame$Race_Category != "No Information", ]
+
+# Melt the filtered data frame to long format for ggplot2
+data_long <- melt(filtered_data, id.vars = "Race_Category")
+
+# Rename columns for clarity
+names(data_long) <- c("Race", "Hispanic_Status", "Count")
+
+# Create the stacked bar chart
+ggplot(data_long, aes(fill = Hispanic_Status, y = Count, x = Race)) +
+  geom_bar(stat = "identity", position = "stack") +
+  labs(title = "Distribution of Race/Ethnicity by Hispanic Identification (Excluding 'No Information')",
+       x = "Race Category",
+       y = "Count",
+       fill = "Hispanic Status") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) # Rotate x labels for better visibility
+
+
+# Display the plot
+  ggsave(paste0(output_directory, "/race_ethnicity_chart", var, ".png"), plot = p, width = 10, height = 8, dpi = 300)
+
+```
+
+### Remove messy Race/Ethnicity Variables
+
+```{r}
+
+data <- data %>% 
+  select(-all_of(race_vars))
+
+```
+
+
+```{r}
+for (var in race_vars_nonwave_3) {
+  labels <- attr(data[[var]], "labels")
+  if (!is.null(labels)) {
+    cat("Variable:", var, "\n")
+    print(labels)
+    cat("\n")
+  }
+}
+
+
+
+```
+
+
 
 --- Information on Variables Used
 
@@ -156,17 +281,29 @@ Father -
 ---
 
 # Data Cleaning and Overview
-```{r, Numeric Vars}
-# Display the structure of the dataset
 
-# Filter data to remove rows with negative values for age and income
-data <- data %>%
-  filter(if_all(all_of(numeric_vars), ~ . >= 0))
 
-# Summary statistics for numeric variables
-summary(select(data, all_of(numeric_vars)))
+```{r}
+# Transform from wide to long format
+long_data <- pivot_longer(data, cols = starts_with("r3f13"), names_to = "Race", values_to = "Value")
+long_data <- long_data[long_data$Value == 1, ]
 
+# Safely add Hispanic/Latino information as a new race category
+long_data <- long_data %>%
+  mutate(Hispanic = ifelse(Race == "r3f13_0" & data$r3f14[seq_along(Race)] == 1, "Hispanic/Latino", "Not Hispanic/Latino")) %>%
+  filter(Hispanic == "Hispanic/Latino" | Race != "r3f13_0")
+
+# Update Race information
+long_data$Race[long_data$Hispanic == "Hispanic/Latino"] <- "Hispanic/Latino"
+
+# Creating the plot
+ggplot(long_data, aes(x = Race, fill = Race)) +
+  geom_bar() +
+  labs(title = "Race Demographics", x = "Race Category", y = "Count") +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Set3")  # Choosing a color palette
 ```
+
 
 ```{r, }
 
