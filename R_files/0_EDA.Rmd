@@ -30,8 +30,8 @@ renv::restore()
 # renv.lock file, that is okay. `p_load` will not change version number
 
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(renv, rmarkdown,  knitr, tidyverse, reshape2, haven, xtable
-               gridExtra, broom, car, caret, Metrics)
+pacman::p_load(renv, rmarkdown,  knitr, tidyverse, reshape2, haven, xtable,
+               gridExtra, broom, car, caret, Metrics, stargazer)
 
 # Update the renv lock file
 renv::snapshot()
@@ -41,7 +41,7 @@ renv::snapshot()
 ```{r}
 
 # Load custom functions
-source("custom_functions.R")
+#source("custom_functions.R")
 
 # load data
 wave1 <- read_dta("~/Desktop/DataSci/DATA2020-Spring2024/DATA2020_Final_Project/data/raw/FF_wave1_2020v2.dta")
@@ -52,22 +52,223 @@ wave5 <- read_dta("~/Desktop/DataSci/DATA2020-Spring2024/DATA2020_Final_Project/
 wave6 <- read_dta("~/Desktop/DataSci/DATA2020-Spring2024/DATA2020_Final_Project/data/raw/FF_wave6_2020v2.dta")
 ```
 
-# Summary Statistics
+# Merge Waves based on Encrypted Family ID
 ```{r}
-# Code to summarize the data
+# https://ffcws.princeton.edu/sites/g/files/toruqf4356/files/year_3_guide.pdf
+
+data <- merge(wave1, wave2, by = "idnum")
+data <- merge(data, wave3, by = "idnum")
+data <- merge(data, wave4, by = "idnum")
+data <- merge(data, wave5, by = "idnum")
+data <- merge(data, wave6, by = "idnum")
+
+```
+
+# Separate Variables into categories and filter
+```{r}
+
+# Numeric Variables
+numeric_vars <- c("cf3age", "f3l1")
+
+# Race variables of Respondent - variables are one hot encoded
+race_vars <- c("r3f13_0", "r3f13_1", "r3f13_2", "r3f13_3", "r3f13_4", "r3f13_5", "r3f13_9", "r3f14", "r3f15")
+
+# Binary Variables
+binary_vars <- c("f3e5a", "cf3marm", "cf3cohm", "m3i0i", "m3i0j")
+
+# Ordinal variables 
+# Check on following variables --- ordinal_vars <- c("m3i0m", "f3i0l1", "m3i0l1", "f3i0m")
+ordinal_vars <- c()
+
+# Multi-categorical Variables
+multi_categorical_vars <- c("f3e5", "f3i2", "m3c41", "f3c41", "m3i0d", "m3i0e", "m3i0f", "m3i0g", "m3i0h", 
+                             "f3i0d", "f3i0e", "f3i0f", "f3i0g", "f3i0h")
+
+# Create vector of desired variables - makes it easier to filter
+desired_vars <- c(numeric_vars, race_vars, binary_vars, ordinal_vars, multi_categorical_vars)
+
+# Filter out only the numeric variables
+data <- data %>% 
+  select(all_of(desired_vars))
+
+# View the filtered dataset
+print(data)
+
+```
+
+--- Information on Variables Used
+
+**Wave 3 of the Dataset: Political Participation and Civic Engagement Variables**
+
+Mother - 
+- `m3i0d`: "In past year, have you participated in: labor union or work-related group?"
+- `m3i0e`: "In past year, have you participated in: community organization?"
+- `m3i0f`: "In past year, have you participated in: group working with children?"
+- `m3i0g`: "Have you ever participated in a political demonstration?"
+- `m3i0h`: "In past year have you taken part in a political demonstration?"
+- `m3i0i`: "Are you registered to vote?"
+- `m3i0j`: "Are you eligible to vote?"
+- `m3i0k`: "Did you vote in the November 2000 election?"
+
+Father -
+- `f3i0d`: "In past year, have you participated in: labor union or work-related group?"
+- `f3i0e`: "In past year, have you participated in: community organization?"
+- `f3i0f`: "In past year, have you participated in: group working with children?"
+- `f3i0g`: "Have you ever participated in a political demonstration?"
+- `f3i0h`: "In past year have you taken part in a political demonstration?"
+- `f3i0i`: "Are you registered to vote?"
+- `f3i0j`: "Are you eligible to vote?"
+- `f3i0k`: "Did you vote in the November 2000 election?"
+
+**Potential Demographic Control Variables:**
+  - `cf3age`: Age
+  - `r3f13_0`: Bi or multiracial
+  - `r3f13_1`: White or Caucasian
+  - `r3f13_2`: Black or African American
+  - `r3f13_3`: Asian
+  - `r3f13_4`: Native Hawaiian or Pacific Islander
+  - `r3f13_5`: Native American or Alaskan
+  - `r3f13_9`: Other races .
+  - `r3f14`: Asking if the respondent is of Hispanic or Latino origin or descent
+  - `r3f15`: Asking if the respondent is Mexican, Cuban, Puerto Rican, Dominican, or of other specified Hispanic descent
+  - `f3e5`: Which best describes current partner's race?
+  - `f3e5a`: Is current partner of Hispanic or Latino descent?
+  - `f3e5b`: Is he/she Mexican, Puerto Rican, Cuban, or Other Hispanic?
+
+**Potential Socioeconomic Control Variables:**
+  - `cf3edu`: Father's Education Level
+  - `cm3edu`: Mother's Education Level
+  - `f3l1`: Income (total household income before taxes)
+  - `f3i2`: What is your current housing situation?
+  - `f3c41` - Is father currently working, in school, or unemployed
+  - `m3c41` - Is mother currently working, in school, or unemployed
+  - `cf3cohm ` - Father living with child's mother at year three
+  - `cf3marm` - Is father married to child's mother at year three?
+  - `o3p8` - How would you best describe the home or building?
+
+**Variables not in Dataset but in Codebooks**
+
+- `m3i0l1`: "How important is it: to vote in elections?"
+- `m3i0m` : "How important is it to volunteer time to community service?"
+- `f3i0l1`: "How important is it: to vote in elections?"
+- `f3i0m` : "How important is it to volunteer time to community service?"
+
+---
+
+# Data Cleaning and Overview
+```{r, Numeric Vars}
+# Display the structure of the dataset
+
+# Filter data to remove rows with negative values for age and income
+data <- data %>%
+  filter(if_all(all_of(numeric_vars), ~ . >= 0))
+
+# Summary statistics for numeric variables
+summary(select(data, all_of(numeric_vars)))
+
+```
+
+```{r, }
+
+# Count levels for categorical variables (including binary and ordinal)
+sapply(data[, c(binary_vars, ordinal_vars, multi_categorical_vars)], function(x) list(levels = levels(as.factor(x))))
+
+```
+
+# Data Cleaning 
+```{r}
+# Handling missing values
+data <- data %>%
+  mutate_at(vars(all_of(c(numeric_vars, binary_vars, ordinal_vars, multi_categorical_vars))),
+            ~ifelse(is.na(.), median(., na.rm = TRUE), .))
+
+# Converting binary variables to factor
+data[binary_vars] <- lapply(data[binary_vars], factor)
+
+# Converting ordinal variables to ordered factor
+data[ordinal_vars] <- lapply(data[ordinal_vars], function(x) factor(x, ordered = TRUE))
 
 
+```
 
+# Exploratory Data Analysis - Numeric Variables
+```{r}
 
+# Set Output directory
+output_directory <- file.path(getwd(), "outputs/EDA")
+
+for(var in numeric_vars) {
+  # Generating histogram for each variable
+  p <- data %>%
+    select(all_of(var)) %>%
+    ggplot(aes(x = .data[[var]])) +
+    geom_histogram(bins = 30, fill = "blue", color = "black") +
+    ggtitle(paste("Histogram of", var))  # Adding title
+
+  # Saving the plot
+  ggsave(paste0(output_directory, "/histogram_", var, ".png"), plot = p, width = 10, height = 8, dpi = 300)
+}
+
+# Loop through each numeric variable to generate and save boxplot
+for(var in numeric_vars) {
+  # Generating boxplot for each variable
+  p <- data %>%
+    select(all_of(var)) %>%
+    ggplot(aes(x = var, y = .data[[var]])) +
+    geom_boxplot() +
+    ggtitle(paste("Boxplot of", var))  # Adding title
+
+  # Saving the plot
+  ggsave(paste0(output_directory, "/boxplot_", var, ".png"), plot = p, width = 10, height = 8, dpi = 300)
+}
+
+```
+
+# Exploratory Data Analysis - Categorical Variables
+
+```{r}
+# Bar plots for categorical variables
+p <- data %>%
+  select(all_of(c(binary_vars, ordinal_vars, multi_categorical_vars))) %>%
+  gather() %>%
+  ggplot(aes(x = value)) +
+  geom_bar() +
+  facet_wrap(~key, scales = "free")
+
+  # Saving the plot
+  ggsave(paste0(output_directory, "/barplots_categorical_vars", ".png"), plot = p, width = 10, height = 8, dpi = 300)
+
+```
+
+```{r}
+# Loop through each variable to create and save a separate plot
+for(var in c(binary_vars, ordinal_vars, multi_categorical_vars)) {
+  p <- data %>%
+    select(all_of(var)) %>%
+    gather() %>%
+    ggplot(aes(x = value)) +
+    geom_bar() +
+    labs(title = paste("Bar Plot of", var), x = var, y = "Count") +
+    theme_minimal()
+  
+  # Saving each plot with a unique filename based on the variable name
+  ggsave(paste0(output_directory, "/barplot_", var, ".png"), plot = p, width = 10, height = 8, dpi = 300)
+}
 ```
 
 # Data Visualization
 ```{r}
 # Code for data visualization
 
+# Correlation matrix plot
+data %>% 
+  select(all_of(numeric_vars)) %>%
+  ggpairs()
 
+# Use chi-squared tests or similar for categorical variables if needed
 
-
-
+# Example of a chi-square test for two categorical variables
+table <- table(data$var8, data$var9)  # Replace var8 and var9 with your variable names
+chisq.test(table)
 
 ```

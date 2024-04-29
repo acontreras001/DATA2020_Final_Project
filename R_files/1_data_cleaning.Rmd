@@ -30,7 +30,7 @@ renv::restore()
 # renv.lock file, that is okay. `p_load` will not change version number
 
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(renv, rmarkdown,  knitr, tidyverse, reshape2, haven, xtable
+pacman::p_load(renv, rmarkdown,  knitr, tidyverse, reshape2, haven, stargazer,
                gridExtra, broom, car, caret, Metrics)
 
 # Update the renv lock file
@@ -53,7 +53,7 @@ wave6 <- read_dta("data/raw/FF_wave6_2020v2.dta")
 # Load Custom Functions
 ```{r}
 # Load custom functions
-source("R_files/custom_functions.R")
+source("R_files/functions_data_cleaning.R")
 ```
 
 # Identify Missing Values
