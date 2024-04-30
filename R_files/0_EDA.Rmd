@@ -85,29 +85,25 @@ hispanic_wave_3 <- c("r3f14")
 race_vars <- c(race_vars_nonwave_3, race_vars_wave_3, hispanic_wave_3)
 
 # Binary Variables
-binary_vars <- c("cf3marm", "cf3cohm", "m3i0i", "m3i0j")
-
-# Ordinal variables 
-# Check on following variables --- ordinal_vars <- c("m3i0m", "f3i0l1", "m3i0l1", "f3i0m")
-ordinal_vars <- c()
+binary_vars <- c("cf3marm", "cf3cohm", "m3i0d", "m3i0e", "m3i0f", "m3i0g", 
+                 "m3i0i", "f3i0d", "f3i0e", "f3i0f", "f3i0g")
 
 # Multi-categorical Variables
-multi_categorical_vars <- c("f3e5", "f3i2", "m3c41", "f3c41", "m3i0d", "m3i0e", "m3i0f", "m3i0g", "m3i0h", 
-                             "f3i0d", "f3i0e", "f3i0f", "f3i0g", "f3i0h")
+multi_categorical_vars <- c("f3i2", "m3c41", "f3c41")
 
 # Create vector of desired variables - makes it easier to filter
-desired_vars <- c(numeric_vars, race_vars, hispanic, binary_vars, ordinal_vars, multi_categorical_vars)
+desired_vars <- c(numeric_vars, race_vars, binary_vars, ordinal_vars, multi_categorical_vars)
+
+vars_future_analyses <- c("m3i0m", "f3i0l1", "m3i0l1", "f3i0m", "f3i0h")
 
 # Filter out only the numeric variables
 data <- data %>% 
   select(all_of(desired_vars))
 
-table(data$r3f13_0)
-
-
 
 ```
 
+# Remove Negative Ages and Incomes from Wave 3
 
 ```{r, Numeric Vars}
 # Display the structure of the dataset
@@ -120,6 +116,8 @@ data <- data %>%
 summary(select(data, all_of(numeric_vars)))
 
 ```
+
+# Work on Race/Ehtnicity Data which is messy
 
 ```{r}
 # New variables for race and Hispanic status
@@ -159,6 +157,13 @@ table(data$Hispanic)
 
 ```
 
+```{r}
+# Set Output directory
+output_directory <- file.path(getwd(), "outputs/EDA")
+
+```
+
+# Plot the Race/Ethnicity Data
 
 ```{r}
 # First, you'll create the contingency table
@@ -180,9 +185,9 @@ data_long <- melt(filtered_data, id.vars = "Race_Category")
 names(data_long) <- c("Race", "Hispanic_Status", "Count")
 
 # Create the stacked bar chart
-ggplot(data_long, aes(fill = Hispanic_Status, y = Count, x = Race)) +
+p <- ggplot(data_long, aes(fill = Hispanic_Status, y = Count, x = Race)) +
   geom_bar(stat = "identity", position = "stack") +
-  labs(title = "Distribution of Race/Ethnicity by Hispanic Identification (Excluding 'No Information')",
+  labs(title = "Distribution of Race/Ethnicity by Hispanic Identification",
        x = "Race Category",
        y = "Count",
        fill = "Hispanic Status") +
@@ -191,11 +196,11 @@ ggplot(data_long, aes(fill = Hispanic_Status, y = Count, x = Race)) +
 
 
 # Display the plot
-  ggsave(paste0(output_directory, "/race_ethnicity_chart", var, ".png"), plot = p, width = 10, height = 8, dpi = 300)
+  ggsave(paste0(output_directory, "/race_ethnicity_chart", ".png"), plot = p, width = 10, height = 8, dpi = 300)
 
 ```
 
-### Remove messy Race/Ethnicity Variables
+# Remove messy Race/Ethnicity Variables
 
 ```{r}
 
@@ -204,18 +209,69 @@ data <- data %>%
 
 ```
 
+# Remove rows which are -1, -2, -3, -4 from vector of binary variables
 
 ```{r}
-for (var in race_vars_nonwave_3) {
+data <- data %>%
+  filter(!if_any(all_of(binary_vars), ~ .x == -1)) %>% # -1 Refuse
+  filter(!if_any(all_of(binary_vars), ~ .x == -2)) %>% # -2 Don't Know
+  filter(!if_any(all_of(binary_vars), ~ .x == -3)) %>% # -3 Missing
+  filter(!if_any(all_of(binary_vars), ~ .x == -6))      # -6 Skip
+```
+
+# Remove rows which are -1, -2 from multi-categorical vars
+
+```{r}
+data <- data %>%
+  filter(!if_any(all_of(multi_categorical_vars), ~ .x == -1)) %>% # -1 Refuse
+  filter(!if_any(all_of(multi_categorical_vars), ~ .x == -2)) # -2 Don't Know
+```
+
+```{r}
+var_labels <- c(
+  "cf3marm" = "Father married to child's mother at year three",
+  "cf3cohm" = "Father living with child's mother at year three",
+  "m3i0d" = "Mother: Participated in labor union/work-related group past year",
+  "m3i0e" = "Mother: Participated in community organization past year",
+  "m3i0f" = "Mother: Participated in group working with children past year",
+  "m3i0g" = "Mother: Ever participated in political demonstration",
+  "m3i0i" = "Mother: Registered to vote",
+  "f3i0d" = "Father: Participated in labor union/work-related group past year",
+  "f3i0e" = "Father: Participated in community organization past year",
+  "f3i0f" = "Father: Participated in group working with children past year",
+  "f3i0g" = "Father: Ever participated in political demonstration",
+  "m3i0h" = "Mother: Participated in political demonstration past year",
+  "m3i0j" = "Mother: Eligible to vote",
+  "m3i0k" = "Mother: Voted in November 2000 election",
+  "f3i0h" = "Father: Participated in political demonstration past year",
+  "f3i0i" = "Father: Registered to vote",
+  "f3i0j" = "Father: Eligible to vote",
+  "f3i0k" = "Father: Voted in November 2000 election",
+  "m3i0l1" = "Mother: Importance of voting in elections",
+  "m3i0m" = "Mother: Importance of volunteering time to community service",
+  "f3i0l1" = "Father: Importance of voting in elections",
+  "f3i0m" = "Father: Importance of volunteering time to community service"
+)
+
+
+```
+
+
+# Use the following code chunk to get information on variable value labels
+
+```{r}
+var_vector <- c("var_1", "var_2")
+
+for (var in multi_categorical_vars) {
   labels <- attr(data[[var]], "labels")
   if (!is.null(labels)) {
     cat("Variable:", var, "\n")
     print(labels)
     cat("\n")
+    print(table(data[[var]]))
+    cat("\n")
   }
 }
-
-
 
 ```
 
@@ -283,28 +339,6 @@ Father -
 # Data Cleaning and Overview
 
 
-```{r}
-# Transform from wide to long format
-long_data <- pivot_longer(data, cols = starts_with("r3f13"), names_to = "Race", values_to = "Value")
-long_data <- long_data[long_data$Value == 1, ]
-
-# Safely add Hispanic/Latino information as a new race category
-long_data <- long_data %>%
-  mutate(Hispanic = ifelse(Race == "r3f13_0" & data$r3f14[seq_along(Race)] == 1, "Hispanic/Latino", "Not Hispanic/Latino")) %>%
-  filter(Hispanic == "Hispanic/Latino" | Race != "r3f13_0")
-
-# Update Race information
-long_data$Race[long_data$Hispanic == "Hispanic/Latino"] <- "Hispanic/Latino"
-
-# Creating the plot
-ggplot(long_data, aes(x = Race, fill = Race)) +
-  geom_bar() +
-  labs(title = "Race Demographics", x = "Race Category", y = "Count") +
-  theme_minimal() +
-  scale_fill_brewer(palette = "Set3")  # Choosing a color palette
-```
-
-
 ```{r, }
 
 # Count levels for categorical variables (including binary and ordinal)
@@ -323,7 +357,7 @@ data <- data %>%
 data[binary_vars] <- lapply(data[binary_vars], factor)
 
 # Converting ordinal variables to ordered factor
-data[ordinal_vars] <- lapply(data[ordinal_vars], function(x) factor(x, ordered = TRUE))
+#data[ordinal_vars] <- lapply(data[ordinal_vars], function(x) factor(x, ordered = TRUE))
 
 
 ```
@@ -331,8 +365,7 @@ data[ordinal_vars] <- lapply(data[ordinal_vars], function(x) factor(x, ordered =
 # Exploratory Data Analysis - Numeric Variables
 ```{r}
 
-# Set Output directory
-output_directory <- file.path(getwd(), "outputs/EDA")
+output_directory <- file.path(getwd(), "outputs/EDA/numeric_vars")
 
 for(var in numeric_vars) {
   # Generating histogram for each variable
@@ -361,12 +394,51 @@ for(var in numeric_vars) {
 
 ```
 
-# Exploratory Data Analysis - Categorical Variables
+# Exploratory Data Analysis - Binary Variables Visualizations
 
 ```{r}
+output_directory <- file.path(getwd(), "outputs/EDA/binary_vars")
+
+
 # Bar plots for categorical variables
 p <- data %>%
-  select(all_of(c(binary_vars, ordinal_vars, multi_categorical_vars))) %>%
+  select(all_of(c(binary_vars))) %>%
+  gather() %>%
+  ggplot(aes(x = value)) +
+  geom_bar() +
+  facet_wrap(~key, scales = "free", labeller = as_labeller(var_labels))
+
+  # Saving the plot
+  ggsave(paste0(output_directory, "/barplots_binary_vars", ".png"), plot = p, width = 10, height = 8, dpi = 300)
+
+```
+
+# Create separate plots for all of the binary vars
+
+```{r}
+# Loop through each variable to create and save a separate plot
+for(var in binary_vars) {
+  p <- data %>%
+    select(all_of(var)) %>%
+    gather() %>%
+    ggplot(aes(x = value)) +
+    geom_bar() +
+    labs(title = paste("Bar Plot of", var), x = var, y = "Count") +
+    theme_minimal()
+  
+  # Saving each plot with a unique filename based on the variable name
+  ggsave(paste0(output_directory, "/barplot_", var, ".png"), plot = p, width = 10, height = 8, dpi = 300)
+}
+```
+
+# Exploratory Data Analysis - Mult-Categorical Variables
+
+```{r}
+output_directory <- file.path(getwd(), "outputs/EDA/multicategorical_vars")
+
+# Bar plots for categorical variables
+p <- data %>%
+  select(all_of(c(multi_categorical_vars))) %>%
   gather() %>%
   ggplot(aes(x = value)) +
   geom_bar() +
@@ -377,9 +449,11 @@ p <- data %>%
 
 ```
 
+# Create separate plots for all of the multi-categorical vars
+
 ```{r}
 # Loop through each variable to create and save a separate plot
-for(var in c(binary_vars, ordinal_vars, multi_categorical_vars)) {
+for(var in multi_categorical_vars) {
   p <- data %>%
     select(all_of(var)) %>%
     gather() %>%
@@ -397,15 +471,15 @@ for(var in c(binary_vars, ordinal_vars, multi_categorical_vars)) {
 ```{r}
 # Code for data visualization
 
-# Correlation matrix plot
-data %>% 
-  select(all_of(numeric_vars)) %>%
-  ggpairs()
-
-# Use chi-squared tests or similar for categorical variables if needed
-
-# Example of a chi-square test for two categorical variables
-table <- table(data$var8, data$var9)  # Replace var8 and var9 with your variable names
-chisq.test(table)
+# # Correlation matrix plot
+# data %>% 
+#   select(all_of(numeric_vars)) %>%
+#   ggpairs()
+# 
+# # Use chi-squared tests or similar for categorical variables if needed
+# 
+# # Example of a chi-square test for two categorical variables
+# table <- table(data$var8, data$var9)  # Replace var8 and var9 with your variable names
+# chisq.test(table)
 
 ```
