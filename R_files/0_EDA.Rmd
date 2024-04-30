@@ -233,17 +233,9 @@ data <- data %>%
 ```{r}
 
 data <- data %>%
-  mutate(f3i2_recode = case_when(
-    f3i2 %in% c(-9, -8, -7, -6, -5, -4, -3, -2, -1) ~ as.numeric(factor(f3i2, levels = c(-9, -8, -7, -6, -5, -4, -3, -2, -1))),
-    f3i2 %in% 1:10 ~ f3i2,
-    f3i2 == 101 ~ 11,
-    f3i2 == 102 ~ 12,
-    f3i2 == 103 ~ 13,
-    TRUE ~ f3i2
-  )) %>%
-  mutate(f3i2_recode = factor(f3i2_recode)) %>% 
-  mutate(f3i2_recode = fct_recode(
-    f3i2_recode,
+  mutate(f3i2 = factor(f3i2)) %>% 
+  mutate(f3i2 = fct_recode(
+    f3i2,
     "Not in wave" = "-9",
     "Out of range" = "-8",
     "N/A" = "-7",
@@ -263,25 +255,16 @@ data <- data %>%
     "Halfway" = "8",
     "Jail" = "9",
     "Homeless" = "10",
-    "Military base/dorm" = "11",
-    "Public housing" = "12",
-    "Lives family/friends" = "13"
+    "Military base/dorm" = "101",
+    "Public housing" = "102",
+    "Lives family/friends" = "103"
   ))
 
 
 data <- data %>%
-  mutate(f3c41_recode = case_when(
-    f3c41 %in% c(-9, -8, -7, -6, -5, -4, -3, -2, -1) ~ as.numeric(factor(f3c41, levels = c(-9, -8, -7, -6, -5, -4, -3, -2, -1))),
-    f3c41 %in% 1:8 ~ f3i2,
-    f3c41 == 101 ~ 9,
-    f3c41 == 102 ~ 10,
-    f3c41 == 103 ~ 11,
-    f3c41 == 104 ~ 12,
-    TRUE ~ f3c41
-  )) %>%
-  mutate(f3c41_recode = factor(f3c41_recode)) %>% 
-  mutate(f3c41_recode = fct_recode(
-    f3c41_recode,
+  mutate(f3c41 = factor(f3c41)) %>% 
+  mutate(f3c41 = fct_recode(
+    f3c41,
       "Not in wave" = "-9",
       "Out of range" = "-8",
       "N/A" = "-7",
@@ -300,25 +283,16 @@ data <- data %>%
       "Homemaker" = "6",
       "Look for work" = "7",
       "Other" = "8",
-      "Disability" = "9",
-      "Halfway house" = "10",
-      "Military" = "11",
-      "Retired" = "12"
+      "Disability" = "101",
+      "Halfway house" = "102",
+      "Military" = "103",
+      "Retired" = "104"
   ))
 
 data <- data %>%
-  mutate(m3c41_recode = case_when(
-    m3c41 %in% c(-9, -8, -7, -6, -5, -4, -3, -2, -1) ~ as.numeric(factor(m3c41, levels = c(-9, -8, -7, -6, -5, -4, -3, -2, -1))),
-    m3c41 %in% 1:8 ~ f3i2,
-    m3c41 == 101 ~ 9,
-    m3c41 == 102 ~ 10,
-    m3c41 == 103 ~ 11,
-    m3c41 == 104 ~ 12,
-    TRUE ~ m3c41
-  )) %>%
-  mutate(m3c41_recode = factor(m3c41_recode)) %>% 
-  mutate(m3c41_recode = fct_recode(
-    m3c41_recode,
+  mutate(m3c41 = factor(m3c41)) %>% 
+  mutate(m3c41 = fct_recode(
+    m3c41,
       "Not in wave" = "-9",
       "Out of range" = "-8",
       "N/A" = "-7",
@@ -337,21 +311,11 @@ data <- data %>%
       "Homemaker" = "6",
       "Look for work" = "7",
       "Other" = "8",
-      "Disability" = "9",
-      "Halfway house" = "10",
-      "Military" = "11",
-      "Retired" = "12"
+      "Disability" = "101",
+      "Halfway house" = "102",
+      "Military" = "103",
+      "Retired" = "104"
   ))
-
-data <- data %>% 
-  select(-all_of(c("f3i2", "f3c41", "m3c41")))
-
-data$f3i2 <- data$f3i2_recode
-data$f3c41 <- data$f3c41_recode
-data$m3c41 <- data$m3c41_recode
-
-data <- data %>% 
-  select(-all_of(c("f3i2_recode", "f3c41_recode", "m3c41_recode")))
 
 ```
 
@@ -397,7 +361,7 @@ binary_vars <- c("father_married_to_mother", "father_living_with_mother", "mothe
                  "mother_part_children_group", "mother_political_demonstration", "father_vote_nov2000", "mother_vote_nov2000",
                  "mother_registered_to_vote", "father_par_labor_union", "father_par_community_org", "father_par_children_group", 
                  "father_political_demonstration")
-multi_categorical_vars <- c("current_housing_situation", "mother_current_employment_status", "dather_current_employment_status")
+multi_categorical_vars <- c("current_housing_situation", "mother_current_employment_status", "father_current_employment_status")
 race_vars <- c("race_category", "hispanic_origin")
 
 ```
@@ -476,10 +440,11 @@ p <- data %>%
   gather() %>%
   ggplot(aes(x = value)) +
   geom_bar() +
-  facet_wrap(~key, scales = "free")
+  facet_wrap(~key, scales = "free") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
-  # Saving the plot
-  ggsave(paste0(output_directory, "/barplots_categorical_vars", ".png"), plot = p, width = 10, height = 8, dpi = 300)
+# Saving the plot
+ggsave(paste0(output_directory, "/barplots_categorical_vars", ".png"), plot = p, width = 10, height = 8, dpi = 300)
 
 # Loop through each variable to create and save a separate plot
 for(var in multi_categorical_vars) {
@@ -489,7 +454,8 @@ for(var in multi_categorical_vars) {
     ggplot(aes(x = value)) +
     geom_bar() +
     labs(title = paste("Bar Plot of", var), x = var, y = "Count") +
-    theme_minimal()
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
   
   # Saving each plot with a unique filename based on the variable name
   ggsave(paste0(output_directory, "/barplot_", var, ".png"), plot = p, width = 10, height = 8, dpi = 300)
