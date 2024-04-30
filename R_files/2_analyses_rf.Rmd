@@ -1,0 +1,233 @@
+---
+title: "Data Analysis"
+output: pdf_document
+---
+
+# Introduction
+This document provides an overview of the analyses conducted on the project dataset.
+
+## Dependency Setup
+```{r Dependency Setup, inlcude = TRUE}
+
+if (!require("here")) install.packages("here")
+library(here)
+
+# Set current working directory to file location
+setwd(here::here())
+
+#Print current working directory in case not connected to .Rproj file
+print(getwd())
+
+# Define the path to the .renv lockfile within the 'renv' folder
+renv_lockfile <- file.path(getwd(), "renv.lock")
+
+# Activate and restore packages from renv lock file
+if (!require("renv")) install.packages("renv")
+renv::restore()
+
+# Use the p_load function to install and load any desired packages that may not 
+# have been in the renv.lock file. Note, if the packages were already in the 
+# renv.lock file, that is okay. `p_load` will not change version number
+
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(renv, rmarkdown,  knitr, tidyverse, reshape2, stargazer, 
+               haven, gridExtra, broom, car, caret, Metrics)
+
+# Update the renv lock file
+renv::snapshot()
+```
+
+## Load Data and Functions
+```{r}
+# Load the RData file back into R
+df <- load("data/processed/df_filtered.rda")
+
+#Load custom functions
+source("R_files/functions_analyses.R")
+```
+
+## Data Overview
+```{r}
+# Code to display basic information about the dataset
+
+
+```
+
+## Descriptive Statistics
+```{r}
+# Code for descriptive statistics
+
+
+```
+
+## Hypothesis Testing
+```{r}
+# Code for conducting hypothesis tests
+
+# Create vectors of dependent and independent variables
+dep_var <- "var1"
+indep_vars <- c("var2", "var3", "var4", "var5", "var6")
+
+lm_formula <- as.formula(paste(dep_var, "~", paste(indep_vars, collapse = " + ")))
+
+linear_model <- lm(formula = lm_formula, data = df)
+
+
+```
+
+# Predictive Modeling
+
+## Linear Models
+```{r}
+
+# Create vectors of dependent and independent variables
+dep_var <- "var1"
+indep_vars_m1 <- c("var2", "var3", "var4", "var5", "var6")
+indep_vars_m2 <- c("var2", "var3", "var4", "var5", "var6", "var7")
+indep_vars_m3 <- c("var2", "var3", "var4", "var5", "var6", "var7", "var8")
+indep_vars_m4 <- c("var2", "var3", "var4", "var5", "var6", "var7", "var8", "var9")
+indep_vars_m5 <- c("var2", "var3", "var4", "var5", "var6", "var7", "var8", "var9", "var10")
+  
+# Construct the formula as a string and then convert it to a formula object
+lm1_formula <- create_lm_formula(dep_var, indep_vars_m1)
+lm2_formula <- create_lm_formula(dep_var, indep_vars_m2)
+lm3_formula <- create_lm_formula(dep_var, indep_vars_m3)
+lm4_formula <- create_lm_formula(dep_var, indep_vars_m4)
+lm5_formula <- create_lm_formula(dep_var, indep_vars_m5)
+
+# Now use this formula in the lm() function
+linear_model_1 <- lm(formula = lm1_formula, data = df)
+linear_model_2 <- lm(formula = lm2_formula, data = df)
+linear_model_3 <- lm(formula = lm3_formula, data = df)
+linear_model_4 <- lm(formula = lm4_formula, data = df)
+linear_model_5 <- lm(formula = lm5_formula, data = df)
+
+```
+
+```{r}
+
+# View the summary of the model
+summary(linear_model_1)
+summary(linear_model_2)
+summary(linear_model_3)
+summary(linear_model_4)
+summary(linear_model_5)
+
+```
+
+```{r}
+
+#Generate table of model results in LaTeX
+stargazer(linear_model_1, linear_model_2, linear_model_3, linear_model_4, linear_model_5,
+          type = "latex",
+          title = "Regression Results",
+          label = "tab:reg_results",
+          table.placement = "H",
+          header = FALSE,
+          model.names = TRUE,
+          out = "outputs/analsyeses/lm_table.tex")
+
+```
+
+```{r}
+
+linear_models <- list(linear_model_1, linear_model_2, linear_model_3, linear_model_4, linear_model_5)
+
+# Loop through each model and create a Q-Q plot
+for(i in seq_along(linear_models)) {
+  create_qq_plot(linear_models[[i]], i)
+}
+
+```
+
+## General Linear Model
+
+```{r}
+
+# Create vectors of dependent and independent variables
+dep_var <- "var1"
+indep_vars_m1 <- c("var2", "var3", "var4", "var5", "var6")
+indep_vars_m2 <- c("var2", "var3", "var4", "var5", "var6", "var7")
+indep_vars_m3 <- c("var2", "var3", "var4", "var5", "var6", "var7", "var8")
+indep_vars_m4 <- c("var2", "var3", "var4", "var5", "var6", "var7", "var8", "var9")
+indep_vars_m5 <- c("var2", "var3", "var4", "var5", "var6", "var7", "var8", "var9", "var10")
+  
+# Construct the formula as a string and then convert it to a formula object
+glm1_formula <- create_glm_formula(dep_var, indep_vars_m1)
+glm2_formula <- create_glm_formula(dep_var, indep_vars_m2)
+glm3_formula <- create_glm_formula(dep_var, indep_vars_m3)
+glm4_formula <- create_glm_formula(dep_var, indep_vars_m4)
+glm5_formula <- create_glm_formula(dep_var, indep_vars_m5)
+
+# Create dataframe of just GLM variables (needed for binning for calibration plots)
+glm1_df <- create_glm_df(df, dep_var, indep_vars_m1)
+glm2_df <- create_glm_df(df, dep_var, indep_vars_m2)
+glm3_df <- create_glm_df(df, dep_var, indep_vars_m3)
+glm4_df <- create_glm_df(df, dep_var, indep_vars_m4)
+glm5_df <- create_glm_df(df, dep_var, indep_vars_m5)
+
+# Now use this formula in the lm() function
+general_linear_model_1 <- lm(formula = glm1_formula, family = binomial, data = glm1_df)
+general_linear_model_2 <- lm(formula = glm2_formula, family = binomial, data = glm2_df)
+general_linear_model_3 <- lm(formula = glm3_formula, family = binomial, data = glm3_df)
+general_linear_model_4 <- lm(formula = glm4_formula, family = binomial, data = glm4_df)
+general_linear_model_5 <- lm(formula = glm5_formula, family = binomial, data = glm5_df)
+
+```
+
+```{r}
+
+# View the summary of the models
+summary(general_linear_model_1)
+summary(general_linear_model_2)
+summary(general_linear_model_3)
+summary(general_linear_model_4)
+summary(general_linear_model_5)
+
+```
+
+
+```{r}
+
+# Generate table of model results in LaTeX
+stargazer(general_linear_model_1, general_linear_model_2, general_linear_model_3, general_linear_model_4, general_linear_model_5,
+          type = "latex",
+          title = "Regression Results",
+          label = "tab:reg_results",
+          table.placement = "H",
+          header = FALSE,
+          model.names = TRUE,
+          out = "outputs/analsyeses/lm_table.tex")
+
+```
+
+```{r}
+
+# Extract predicted probabilities
+glm1_df$predicted_prob <- predict(general_linear_model_1, type = "response")
+glm2_df$predicted_prob <- predict(general_linear_model_2, type = "response")
+glm3_df$predicted_prob <- predict(general_linear_model_3, type = "response")
+glm4_df$predicted_prob <- predict(general_linear_model_4, type = "response")
+glm5_df$predicted_prob <- predict(general_linear_model_5, type = "response")
+
+# Create bins for predicted probabilities
+glm1_df$prob_bin <- cut(glm1_df$predicted_prob, breaks = seq(0, 1, by = 0.03), include.lowest = TRUE)
+glm2_df$prob_bin <- cut(glm2_df$predicted_prob, breaks = seq(0, 1, by = 0.03), include.lowest = TRUE)
+glm3_df$prob_bin <- cut(glm3_df$predicted_prob, breaks = seq(0, 1, by = 0.03), include.lowest = TRUE)
+glm4_df$prob_bin <- cut(glm4_df$predicted_prob, breaks = seq(0, 1, by = 0.03), include.lowest = TRUE)
+glm5_df$prob_bin <- cut(glm5_df$predicted_prob, breaks = seq(0, 1, by = 0.03), include.lowest = TRUE)
+
+# Create calibration plots
+create_calibration_plot(glm1_df, dep_var, paste("outputs/analyses/calibration_plot_model_", "1", ".png", sep = ""))
+create_calibration_plot(glm2_df, dep_var, paste("outputs/analyses/calibration_plot_model_", "2", ".png", sep = ""))
+create_calibration_plot(glm3_df, dep_var, paste("outputs/analyses/calibration_plot_model_", "3", ".png", sep = ""))
+create_calibration_plot(glm4_df, dep_var, paste("outputs/analyses/calibration_plot_model_", "4", ".png", sep = ""))
+create_calibration_plot(glm5_df, dep_var, paste("outputs/analyses/calibration_plot_model_", "5", ".png", sep = ""))
+
+```
+
+## Results
+Discuss the results of the analyses, including any significant findings and implications.
+
+## Conclusion
+Summarize the main conclusions drawn from the analyses, including any recommendations for further research or practical applications.

@@ -48,8 +48,8 @@ wave1 <- read_dta("~/Desktop/DataSci/DATA2020-Spring2024/DATA2020_Final_Project/
 wave2 <- read_dta("~/Desktop/DataSci/DATA2020-Spring2024/DATA2020_Final_Project/data/raw/FF_wave2_2020v2.dta")
 wave3 <- read_dta("~/Desktop/DataSci/DATA2020-Spring2024/DATA2020_Final_Project/data/raw/FF_wave3_2020v2.dta")
 wave4 <- read_dta("~/Desktop/DataSci/DATA2020-Spring2024/DATA2020_Final_Project/data/raw/FF_wave4_2020v2.dta")
-wave5 <- read_dta("~/Desktop/DataSci/DATA2020-Spring2024/DATA2020_Final_Project/data/raw/FF_wave5_2020v2.dta")
-wave6 <- read_dta("~/Desktop/DataSci/DATA2020-Spring2024/DATA2020_Final_Project/data/raw/FF_wave6_2020v2.dta")
+#wave5 <- read_dta("~/Desktop/DataSci/DATA2020-Spring2024/DATA2020_Final_Project/data/raw/FF_wave5_2020v2.dta")
+#wave6 <- read_dta("~/Desktop/DataSci/DATA2020-Spring2024/DATA2020_Final_Project/data/raw/FF_wave6_2020v2.dta")
 ```
 
 # Merge Waves based on Encrypted Family ID
@@ -59,8 +59,8 @@ wave6 <- read_dta("~/Desktop/DataSci/DATA2020-Spring2024/DATA2020_Final_Project/
 data <- merge(wave1, wave2, by = "idnum")
 data <- merge(data, wave3, by = "idnum")
 data <- merge(data, wave4, by = "idnum")
-data <- merge(data, wave5, by = "idnum")
-data <- merge(data, wave6, by = "idnum")
+#data <- merge(data, wave5, by = "idnum")
+#data <- merge(data, wave6, by = "idnum")
 
 
 
@@ -85,14 +85,17 @@ hispanic_wave_3 <- c("r3f14")
 race_vars <- c(race_vars_nonwave_3, race_vars_wave_3, hispanic_wave_3)
 
 # Binary Variables
-binary_vars <- c("cf3marm", "cf3cohm", "m3i0d", "m3i0e", "m3i0f", "m3i0g", 
+binary_vars <- c("cf3marm", "cf3cohm", "m3i0d", "m3i0e", "m3i0f", "m3i0g", "f3i0k", "m3i0k",
                  "m3i0i", "f3i0d", "f3i0e", "f3i0f", "f3i0g")
 
 # Multi-categorical Variables
 multi_categorical_vars <- c("f3i2", "m3c41", "f3c41")
 
+# Ordinal Vars
+ordinal_vars <- c()
+
 # Create vector of desired variables - makes it easier to filter
-desired_vars <- c(numeric_vars, race_vars, binary_vars, ordinal_vars, multi_categorical_vars)
+desired_vars <- c("idnum", numeric_vars, race_vars, binary_vars, ordinal_vars, multi_categorical_vars)
 
 vars_future_analyses <- c("m3i0m", "f3i0l1", "m3i0l1", "f3i0m", "f3i0h")
 
@@ -209,14 +212,27 @@ data <- data %>%
 
 ```
 
-# Remove rows which are -1, -2, -3, -4 from vector of binary variables
+# Cleaning Binary Data
 
 ```{r}
+
+# Remove rows which are -1, -2, -3, -4 from vector of binary variables
 data <- data %>%
   filter(!if_any(all_of(binary_vars), ~ .x == -1)) %>% # -1 Refuse
   filter(!if_any(all_of(binary_vars), ~ .x == -2)) %>% # -2 Don't Know
   filter(!if_any(all_of(binary_vars), ~ .x == -3)) %>% # -3 Missing
   filter(!if_any(all_of(binary_vars), ~ .x == -6))      # -6 Skip
+
+# Vector for variables using 0, 1 encoding for No/Yes
+binary_no_yes_0_1 <- c("cf3marm", "cf3cohm")
+
+# Vector for variables using 1, 2 encoding for Yes/No
+binary_yes_no_1_2 <- c("m3i0d", "m3i0e", "m3i0f", "m3i0g", "m3i0i", "f3i0d", "f3i0e", "f3i0f", "f3i0g", "f3i0k", "m3i0k")
+
+# Recode the variables first
+data <- data %>%
+  mutate(across(all_of(binary_yes_no_1_2), ~ifelse(. == 2, 0, .)))
+
 ```
 
 # Remove rows which are -1, -2 from multi-categorical vars
@@ -262,7 +278,7 @@ var_labels <- c(
 ```{r}
 var_vector <- c("var_1", "var_2")
 
-for (var in multi_categorical_vars) {
+for (var in binary_vars) {
   labels <- attr(data[[var]], "labels")
   if (!is.null(labels)) {
     cat("Variable:", var, "\n")
@@ -465,6 +481,16 @@ for(var in multi_categorical_vars) {
   # Saving each plot with a unique filename based on the variable name
   ggsave(paste0(output_directory, "/barplot_", var, ".png"), plot = p, width = 10, height = 8, dpi = 300)
 }
+```
+
+```{r}
+
+output_directory <- file.path(getwd(), "data/processed")
+
+save(data, file = paste0(output_directory, "/EDA_output.RData"))
+
+write.csv(data, file = paste0(output_directory, "/EDA_output.csv"), row.names = FALSE)
+
 ```
 
 # Data Visualization
