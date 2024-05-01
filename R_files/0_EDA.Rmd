@@ -40,10 +40,8 @@ renv::snapshot()
 # Data Loading
 ```{r}
 
-# Load custom functions
 #source("custom_functions.R")
 
-# load data
 wave1 <- read_dta("~/Desktop/DataSci/DATA2020-Spring2024/DATA2020_Final_Project/data/raw/FF_wave1_2020v2.dta")
 wave2 <- read_dta("~/Desktop/DataSci/DATA2020-Spring2024/DATA2020_Final_Project/data/raw/FF_wave2_2020v2.dta")
 wave3 <- read_dta("~/Desktop/DataSci/DATA2020-Spring2024/DATA2020_Final_Project/data/raw/FF_wave3_2020v2.dta")
@@ -92,7 +90,7 @@ multi_categorical_vars <- c("f3i2", "m3c41", "f3c41")
 # Ordinal Vars
 ordinal_vars <- c()
 
-# Create vector of desired variables - makes it easier to filter
+# Create vector of desired variables
 desired_vars <- c("idnum", numeric_vars, race_vars, binary_vars, ordinal_vars, multi_categorical_vars)
 
 # Filter out only the numeric variables
@@ -108,8 +106,6 @@ vars_for_future_analyses <- c("m3i0m", "f3i0l1", "m3i0l1", "f3i0m", "m3i0i", "f3
 # Remove Negative Ages and Incomes
 
 ```{r, Numeric Vars}
-# Display the structure of the dataset
-
 # Filter data to remove rows with negative values for age and income
 data <- data %>%
   filter(if_all(all_of(numeric_vars), ~ . >= 0))
@@ -166,22 +162,18 @@ data <- data %>%
 # Plot the Race/Ethnicity Data
 
 ```{r}
-# Set Output directory
 output_directory <- file.path(getwd(), "outputs/EDA/multicategorical_vars")
 
-# First, you'll create the contingency table
 data_table <- table(data$Race_Category, data$Hispanic)
 
 # Convert the table to a data frame
 data_frame <- as.data.frame.matrix(data_table)
 
-# Add a race category as a new column
+# Adding a  new column
 data_frame$Race_Category <- rownames(data_frame)
 
-# Filter out the 'No Information' category
 filtered_data <- data_frame[data_frame$Race_Category != "No Information", ]
 
-# Melt the filtered data frame to long format for ggplot2
 data_long <- melt(filtered_data, id.vars = "Race_Category")
 
 # Rename columns for clarity
@@ -195,10 +187,7 @@ p <- ggplot(data_long, aes(fill = Hispanic_Status, y = Count, x = Race)) +
        y = "Count",
        fill = "Hispanic Status") +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) # Rotate x labels for better visibility
-
-
-# Display the plot
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
   ggsave(paste0(output_directory, "/race_ethnicity_chart", ".png"), plot = p, width = 10, height = 8, dpi = 300)
 
 ```
@@ -384,9 +373,7 @@ for(var in numeric_vars) {
     select(all_of(var)) %>%
     ggplot(aes(x = .data[[var]])) +
     geom_histogram(bins = 30, fill = "blue", color = "black") +
-    ggtitle(paste("Histogram of", var))  # Adding title
-
-  # Saving the plot
+    ggtitle(paste("Histogram of", var))  
   ggsave(paste0(output_directory, "/histogram_", var, ".png"), plot = p, width = 10, height = 8, dpi = 300)
 }
 
@@ -397,9 +384,7 @@ for(var in numeric_vars) {
     select(all_of(var)) %>%
     ggplot(aes(x = var, y = .data[[var]])) +
     geom_boxplot() +
-    ggtitle(paste("Boxplot of", var))  # Adding title
-
-  # Saving the plot
+    ggtitle(paste("Boxplot of", var)) 
   ggsave(paste0(output_directory, "/boxplot_", var, ".png"), plot = p, width = 10, height = 8, dpi = 300)
 }
 
