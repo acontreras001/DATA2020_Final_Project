@@ -1,7 +1,6 @@
-# Function to create linear model formula
+# Create linear model formula
 create_lm_formula <- function(dependent_var, independent_vars) {
-  # Create the formula string
-  # Paste together the dependent variable, the tilde (~), and the independent variables joined by "+"
+
   formula_str <- paste(dependent_var, "~", paste(independent_vars, collapse = " + "))
   
   # Convert the string to a formula object
@@ -28,15 +27,14 @@ create_qq_plot <- function(model, index) {
   # Display the Q-Q plot
   print(qq_plot)
   
-  # Save the Q-Q plot
+  # Save the plot
   ggsave(filename = paste("outputs/analyses/qq_plot_model_", index, ".png", sep = ""), 
          plot = qq_plot, width = 20, height = 16, units = "cm")
 }
 
 # Function to create general linear model formula
 create_glm_formula <- function(dependent_var, independent_vars) {
-  # Create the formula string
-  # Paste together the dependent variable, the tilde (~), and the independent variables joined by "+"
+
   formula_str <- paste(dependent_var, "~", paste(independent_vars, collapse = " + "))
   
   # Convert the string to a formula object
@@ -69,7 +67,7 @@ create_calibration_plot <- function(data, dep_var, output_file) {
     group_by(prob_bin) %>%
     summarise(
       Avg_Predicted = mean(predicted_prob),
-      Avg_Actual = mean(dep_var_actual, na.rm = TRUE),  # Ensure numeric calculation
+      Avg_Actual = mean(dep_var_actual, na.rm = TRUE),
       N = n(),
       SE = sqrt(Avg_Actual * (1 - Avg_Actual) / N),
       Lower_CI = Avg_Actual - 1.96 * SE,
@@ -84,7 +82,6 @@ create_calibration_plot <- function(data, dep_var, output_file) {
     geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "red") +
     theme_gray()
   
-  # Save the plot
   ggsave(filename = output_file, plot = calibration_data, width = 20, height = 16, units = "cm")
 }
 }
