@@ -255,3 +255,21 @@ create_calibration_plot(glm_df, dep_var, output_file)
 summary(general_linear_model)
 
 ```
+
+```{r}
+# Generate LaTeX code with stargazer
+stargazer::stargazer(general_linear_model, type = "latex",
+          title = "Regression Results", align = TRUE,
+          header = FALSE, single.row = TRUE,  # Keep single.row to TRUE for one line per model
+          column.labels = c("Estimate", "Std. Error"),  # Define column labels
+          star.char.levels = c(0.01, 0.05, 0.1),  # Customize significance levels if needed
+          digits = 4,
+          style = "default",  # Ensure default styling
+          model.numbers = FALSE)  # Remove model numbers if not needed
+```
+
+```{r}
+# Generate LaTeX code with stargazer
+latex_table <- xtable::xtable(general_linear_model)
+print(latex_table, include.rownames = TRUE, floating = FALSE)
+```
