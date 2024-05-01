@@ -62,8 +62,6 @@ data <- merge(data, wave4, by = "idnum")
 #data <- merge(data, wave5, by = "idnum")
 #data <- merge(data, wave6, by = "idnum")
 
-
-
 #variable_names <- names(data)
 #selected_variables <- grep("^r3", variable_names, value = TRUE)
 #print(selected_variables)
@@ -86,7 +84,7 @@ race_vars <- c(race_vars_nonwave_3, race_vars_wave_3, hispanic_wave_3)
 
 # Binary Variables
 binary_vars <- c("cf3marm", "cf3cohm", "m3i0d", "m3i0e", "m3i0f", "m3i0g", "f3i0k", "m3i0k",
-                 "m3i0i", "f3i0d", "f3i0e", "f3i0f", "f3i0g")
+                 "f3i0d", "f3i0e", "f3i0f", "f3i0g")
 
 # Multi-categorical Variables
 multi_categorical_vars <- c("f3i2", "m3c41", "f3c41")
@@ -102,7 +100,7 @@ data <- data %>%
   select(all_of(desired_vars))
 
 # Keep to reference for Poster Presenation
-vars_for_future_analyses <- c("m3i0m", "f3i0l1", "m3i0l1", "f3i0m", "f3i0h")
+vars_for_future_analyses <- c("m3i0m", "f3i0l1", "m3i0l1", "f3i0m", "m3i0i", "f3i0h")
 
 
 ```
@@ -220,11 +218,14 @@ data <- data %>%
 binary_no_yes_0_1 <- c("cf3marm", "cf3cohm")
 
 # Vector for variables using 1, 2 encoding for Yes/No
-binary_yes_no_1_2 <- c("m3i0d", "m3i0e", "m3i0f", "m3i0g", "m3i0i", "f3i0d", "f3i0e", "f3i0f", "f3i0g", "f3i0k", "m3i0k")
+binary_yes_no_1_2 <- c("m3i0d", "m3i0e", "m3i0f", "m3i0g", "f3i0d", 
+                       "f3i0e", "f3i0f", "f3i0g", "f3i0k", "m3i0k")
 
 # Recode the variables first
 data <- data %>%
   mutate(across(all_of(binary_yes_no_1_2), ~ifelse(. == 2, 0, .)))
+
+table(data$m3i0i)
 
 ```
 
@@ -344,7 +345,7 @@ data <- data %>%
     mother_political_demonstration = m3i0g,
     father_vote_nov2000 = f3i0k,
     mother_vote_nov2000 = m3i0k,
-    mother_registered_to_vote = m3i0i,
+    #mother_registered_to_vote = m3i0i,
     father_par_labor_union = f3i0d,
     father_par_community_org = f3i0e,
     father_par_children_group = f3i0f,
@@ -359,10 +360,16 @@ data <- data %>%
 numeric_vars <- c("father_age", "mother_age", "household_income_pre_tax")
 binary_vars <- c("father_married_to_mother", "father_living_with_mother", "mother_part_labor_union", "mother_part_community_org", 
                  "mother_part_children_group", "mother_political_demonstration", "father_vote_nov2000", "mother_vote_nov2000",
-                 "mother_registered_to_vote", "father_par_labor_union", "father_par_community_org", "father_par_children_group", 
-                 "father_political_demonstration")
+                 "father_par_labor_union", "father_par_community_org", "father_par_children_group", "father_political_demonstration")
 multi_categorical_vars <- c("current_housing_situation", "mother_current_employment_status", "father_current_employment_status")
 race_vars <- c("race_category", "hispanic_origin")
+
+```
+
+```{r}
+
+data <- data %>% 
+  select(-all_of(multi_categorical_vars))
 
 ```
 
@@ -432,34 +439,34 @@ for(var in binary_vars) {
 # Exploratory Data Analysis - Mult-Categorical Variables
 
 ```{r}
-output_directory <- file.path(getwd(), "outputs/EDA/multicategorical_vars")
-
-# Bar plots for categorical variables
-p <- data %>%
-  select(all_of(c(multi_categorical_vars))) %>%
-  gather() %>%
-  ggplot(aes(x = value)) +
-  geom_bar() +
-  facet_wrap(~key, scales = "free") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
-
-# Saving the plot
-ggsave(paste0(output_directory, "/barplots_categorical_vars", ".png"), plot = p, width = 10, height = 8, dpi = 300)
-
-# Loop through each variable to create and save a separate plot
-for(var in multi_categorical_vars) {
-  p <- data %>%
-    select(all_of(var)) %>%
-    gather() %>%
-    ggplot(aes(x = value)) +
-    geom_bar() +
-    labs(title = paste("Bar Plot of", var), x = var, y = "Count") +
-    theme_minimal() +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1))
-  
-  # Saving each plot with a unique filename based on the variable name
-  ggsave(paste0(output_directory, "/barplot_", var, ".png"), plot = p, width = 10, height = 8, dpi = 300)
-}
+# output_directory <- file.path(getwd(), "outputs/EDA/multicategorical_vars")
+# 
+# # Bar plots for categorical variables
+# p <- data %>%
+#   select(all_of(c(multi_categorical_vars))) %>%
+#   gather() %>%
+#   ggplot(aes(x = value)) +
+#   geom_bar() +
+#   facet_wrap(~key, scales = "free") +
+#   theme(axis.text.x = element_text(angle = 90, hjust = 1))
+# 
+# # Saving the plot
+# ggsave(paste0(output_directory, "/barplots_categorical_vars", ".png"), plot = p, width = 10, height = 8, dpi = 300)
+# 
+# # Loop through each variable to create and save a separate plot
+# for(var in multi_categorical_vars) {
+#   p <- data %>%
+#     select(all_of(var)) %>%
+#     gather() %>%
+#     ggplot(aes(x = value)) +
+#     geom_bar() +
+#     labs(title = paste("Bar Plot of", var), x = var, y = "Count") +
+#     theme_minimal() +
+#     theme(axis.text.x = element_text(angle = 90, hjust = 1))
+#   
+#   # Saving each plot with a unique filename based on the variable name
+#   ggsave(paste0(output_directory, "/barplot_", var, ".png"), plot = p, width = 10, height = 8, dpi = 300)
+# }
 ```
 
 # Save data
@@ -473,6 +480,20 @@ save(data, file = paste0(output_directory, "/EDA_output.RData"))
 write.csv(data, file = paste0(output_directory, "/EDA_output.csv"), row.names = FALSE)
 
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ### Additional code, not necessary but potentially useful in future
@@ -615,18 +636,18 @@ var_labels <- c(
 ```{r}
 
 # Count levels for categorical variables (including binary and ordinal)
-sapply(data[, c(binary_vars, ordinal_vars, multi_categorical_vars)], function(x) list(levels = levels(as.factor(x))))
-
-# Handling missing values
-data <- data %>%
-  mutate_at(vars(all_of(c(numeric_vars, binary_vars, ordinal_vars, multi_categorical_vars))),
-            ~ifelse(is.na(.), median(., na.rm = TRUE), .))
-
-# Converting binary variables to factor
-data[binary_vars] <- lapply(data[binary_vars], factor)
-
-# Converting ordinal variables to ordered factor
-#data[ordinal_vars] <- lapply(data[ordinal_vars], function(x) factor(x, ordered = TRUE))
+# sapply(data[, c(binary_vars, ordinal_vars, multi_categorical_vars)], function(x) list(levels = levels(as.factor(x))))
+# 
+# # Handling missing values
+# data <- data %>%
+#   mutate_at(vars(all_of(c(numeric_vars, binary_vars, ordinal_vars, multi_categorical_vars))),
+#             ~ifelse(is.na(.), median(., na.rm = TRUE), .))
+# 
+# # Converting binary variables to factor
+# data[binary_vars] <- lapply(data[binary_vars], factor)
+# 
+# # Converting ordinal variables to ordered factor
+# #data[ordinal_vars] <- lapply(data[ordinal_vars], function(x) factor(x, ordered = TRUE))
 
 
 ```

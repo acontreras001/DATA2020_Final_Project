@@ -58,26 +58,33 @@ create_glm_df <- function(df, dep_var, indep_vars) {
 }
 
 
+# Function to create calibration plot
 create_calibration_plot <- function(data, dep_var, output_file) {
+  # Convert dep_var to actual data column in the dataframe
+  data$dep_var_actual <- data[[dep_var]]
+  
+  # Create probability bins and calculate metrics
   calibration_data <- data %>%
-    dplyr::group_by(prob_bin) %>%
-    dplyr::summarise(Avg_Predicted = mean(predicted_prob),
-                     Avg_Actual = mean({{dep_var}}),
-                     N = n(),
-                     SE = sqrt(Avg_Actual * (1 - Avg_Actual) / N),
-                     Lower_CI = Avg_Actual - 1.96 * SE,
-                     Upper_CI = Avg_Actual + 1.96 * SE)
+    mutate(prob_bin = cut(predicted_prob, breaks = seq(0, 1, by = 0.1), include.lowest = TRUE, right = FALSE)) %>%
+    group_by(prob_bin) %>%
+    summarise(
+      Avg_Predicted = mean(predicted_prob),
+      Avg_Actual = mean(dep_var_actual, na.rm = TRUE),  # Ensure numeric calculation
+      N = n(),
+      SE = sqrt(Avg_Actual * (1 - Avg_Actual) / N),
+      Lower_CI = Avg_Actual - 1.96 * SE,
+      Upper_CI = Avg_Actual + 1.96 * SE
+    ) %>%
+    ggplot(aes(x = Avg_Predicted, y = Avg_Actual)) +
+    geom_point() +
+    geom_errorbar(aes(ymin = Lower_CI, ymax = Upper_CI), width = 0.02) +
+    xlim(0, 1) +
+    ylim(0, 1) +
+    labs(x = "Average Predicted Probability", y = "Average Observed Outcome", title = "Calibration Plot") +
+    geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "red") +
+    theme_gray()
   
-  calibration_plot <- ggplot2::ggplot(calibration_data, ggplot2::aes(x = Avg_Predicted, y = Avg_Actual)) +
-    ggplot2::geom_point() +
-    ggplot2::geom_errorbar(ggplot2::aes(ymin = Lower_CI, ymax = Upper_CI), width = 0.02) +
-    ggplot2::xlim(0, 1) +
-    ggplot2::ylim(0, 1) +
-    ggplot2::labs(x = "Average Predicted Probability", 
-                  y = "Average Observed Outcome", 
-                  title = "Calibration Plot") +
-    ggplot2::geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "red") +
-    ggplot2::theme_gray()
-  
-  ggplot2::ggsave(filename = output_file, plot = calibration_plot, width = 20, height = 16, units = "cm")
+  # Save the plot
+  ggsave(filename = output_file, plot = calibration_data, width = 20, height = 16, units = "cm")
+}
 }
