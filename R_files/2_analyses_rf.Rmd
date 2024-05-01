@@ -51,8 +51,8 @@ dataset <- readr::read_csv("data/processed/EDA_output.csv")
 ```{r}
 
 # Preprocessing
-dataset <- select(dataset, -participant_id)  # Drop the participant_id column
-dataset <- na.omit(dataset)                  # Remove rows with any missing data
+dataset <- select(dataset, -participant_id)  
+dataset <- na.omit(dataset)                  
 
 # Ensure the target variable is a factor
 dataset$father_vote_nov2000 <- as.factor(dataset$father_vote_nov2000)
@@ -78,15 +78,13 @@ print(importance(rf_model))  # Print variable importance
 # Predictions and evaluation
 predictions <- predict(rf_model, dataset)
 
-# Confusion matrix to see the prediction accuracy
+# Confusion matrix to see prediction accuracy
 conf_mat <- table(Predicted = predictions, Actual = response)
-
-# Print the confusion matrix
 print(conf_mat)
 
 # Calculate classification error
 total_predictions <- sum(conf_mat)
-correct_predictions <- sum(diag(conf_mat))  # Sum of diagonal elements (correct predictions)
+correct_predictions <- sum(diag(conf_mat)) 
 classification_error <- (total_predictions - correct_predictions) / total_predictions
 
 # Print classification error
@@ -107,18 +105,18 @@ custom_color <- rgb(78/255, 54/255, 41/255)
 
 # Create a bar plot of feature importance using the custom RGB color
 p <- ggplot(feature_importance, aes(x = reorder(Feature, Importance), y = Importance)) +
-  geom_bar(stat = "identity", fill = custom_color) +  # Use custom RGB color here
+  geom_bar(stat = "identity", fill = custom_color) + 
   labs(title = "Feature Importance in Random Forest Model",
        x = "Feature",
        y = "Importance (Gini Decrease)") +
-  coord_flip() +  # Flips the axes for better visualization of long names
+  coord_flip() +  
   theme_minimal() +
   theme(axis.text.y = element_text(angle = 0, size = 16))
 
 
 output_directory <- file.path(getwd(), "outputs/analysis_rf")
 
-# Saving each plot with a unique filename based on the variable name
+# Saving each plot
 ggsave(paste0(output_directory, "/random_forest_feature_importance", ".png"), plot = p, width = 10, height = 8, dpi = 300)
 
 ```
