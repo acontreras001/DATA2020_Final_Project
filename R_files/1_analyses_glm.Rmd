@@ -269,7 +269,15 @@ stargazer::stargazer(general_linear_model, type = "latex",
 ```
 
 ```{r}
-# Generate LaTeX code with stargazer
-latex_table <- xtable::xtable(general_linear_model)
-print(latex_table, include.rownames = TRUE, floating = FALSE)
-```
+# Generate LaTeX code with XTable
+
+model_summary <- summary(general_linear_model)$coefficients
+
+# Sorting the summary by p-values (assuming p-values are in the 4th column)
+sorted_model_summary <- model_summary[order(model_summary[, 4]),]
+
+# Convert sorted summary to xtable
+latex_table <- xtable::xtable(sorted_model_summary)
+
+# Print LaTeX code with four decimal places, without row names and floating option
+print(latex_table, include.rownames = TRUE, floating = FALSE, digits = rep(6, ncol(sorted_model_summary)))

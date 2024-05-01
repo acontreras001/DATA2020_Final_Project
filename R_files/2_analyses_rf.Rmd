@@ -69,7 +69,7 @@ features <- select(dataset, -father_vote_nov2000)
 
 # Run the random forest model
 set.seed(42)  # Set seed for reproducibility
-rf_model <- randomForest(response ~ ., data=features, ntree=5000, importance=TRUE)
+rf_model <- randomForest(response ~ ., data=features, ntree=500, importance=TRUE)
 
 # Output
 print(rf_model)  # Print the model summary
