@@ -101,8 +101,8 @@ ggsave(paste0(output_directory, "/numeric_vars_corr_comp", ".png"), plot = p, wi
 #         diag = list(continuous = wrap("barDiag")),
 #         axisLabels = "show",
 #         progress = FALSE) +
-#   theme_bw() +  # Using a theme for better appearance
-#   theme(text = element_text(size = 12), panel.spacing = unit(2, "lines"))  # Customizing text and spacing
+#   theme_bw() + 
+#   theme(text = element_text(size = 12), panel.spacing = unit(2, "lines")) 
 
 ```
 
