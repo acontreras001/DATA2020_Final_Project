@@ -37,9 +37,7 @@ pacman::p_load(renv, rmarkdown,  knitr, tidyverse, reshape2, stargazer, GGally,
 renv::snapshot()
 ```
 
-## Load Data and Functions
 ```{r}
-# Load the RData file back into R
 df <- readr::read_csv("data/processed/EDA_output.csv")
 
 #Load custom functions
@@ -77,8 +75,8 @@ p <- GGally::ggpairs(df[, numeric_vars],
                      diag = list(continuous = wrap("barDiag")),
                      axisLabels = "show",
                      progress = FALSE) +
-  theme_bw() +  # Using a theme for better appearance
-  theme(text = element_text(size = 12), panel.spacing = unit(2, "lines"))  # Customizing text and spacing
+  theme_bw() +  
+  theme(text = element_text(size = 12), panel.spacing = unit(2, "lines"))  
 
 
 ggsave(paste0(output_directory, "/numeric_vars_corr_comp", ".png"), plot = p, width = 10, height = 8, dpi = 300)
@@ -184,13 +182,13 @@ ggsave(paste0(output_directory, "/binary_data_corr", ".png"), plot = p, width = 
 # Create General Linear Model
 
 ```{r}
-# Create the formula for your GLM
+# Formula for  GLM
 create_glm_formula <- function(dependent_var, independent_vars) {
   formula_str <- paste(dependent_var, "~", paste(independent_vars, collapse = " + "))
   as.formula(formula_str)
 }
 
-# Create a dataframe for the GLM
+# Dataframe for  GLM
 create_glm_df <- function(df, dep_var, indep_vars) {
   glm_vars <- c(dep_var, indep_vars)
   df %>% select(all_of(glm_vars)) %>% drop_na()
@@ -201,7 +199,7 @@ create_calibration_plot <- function(data, dep_var, output_file) {
   # Convert dep_var to actual data column in the dataframe
   data$dep_var_actual <- data[[dep_var]]
 
-  # Create probability bins and calculate metrics
+  # Calculate metrics
   calibration_data <- data %>%
     mutate(prob_bin = cut(predicted_prob, breaks = seq(0, 1, by = 0.1), include.lowest = TRUE, right = FALSE)) %>%
     group_by(prob_bin) %>%
@@ -222,7 +220,6 @@ create_calibration_plot <- function(data, dep_var, output_file) {
       geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "red") +
       theme_gray()
 
-  # Save the plot
   ggsave(filename = output_file, plot = calibration_data, width = 20, height = 16, units = "cm")
 }
 
@@ -231,27 +228,23 @@ create_calibration_plot <- function(data, dep_var, output_file) {
 
 ```{r}
 
-# Prepare variables
 dep_var <- "father_vote_nov2000"
 all_vars <- c(numeric_vars, binary_vars, multi_categorical_vars, race_vars) # define these variables as needed
 indep_vars <- setdiff(all_vars, dep_var)
 
-# Create the GLM formula and data frame
+# Create the GLM 
 glm_formula <- create_glm_formula(dep_var, indep_vars)
 glm_df <- create_glm_df(df, dep_var, indep_vars)
 
-# Fit the model
 general_linear_model <- glm(formula = glm_formula, family = binomial(), data = glm_df, control = list(maxit = 1000))
 
-# Add predicted probabilities to the dataframe
 glm_df$predicted_prob <- predict(general_linear_model, type = "response")
 
-# Create calibration plot
+# Calibration plot
 
 output_file <- file.path(getwd(), "outputs/analysis_glm/calibration_plot.png")
 create_calibration_plot(glm_df, dep_var, output_file)
 
-# View model summary
 summary(general_linear_model)
 
 ```
@@ -260,24 +253,23 @@ summary(general_linear_model)
 # Generate LaTeX code with stargazer
 stargazer::stargazer(general_linear_model, type = "latex",
           title = "Regression Results", align = TRUE,
-          header = FALSE, single.row = TRUE,  # Keep single.row to TRUE for one line per model
-          column.labels = c("Estimate", "Std. Error"),  # Define column labels
-          star.char.levels = c(0.01, 0.05, 0.1),  # Customize significance levels if needed
+          header = FALSE, single.row = TRUE, 
+          column.labels = c("Estimate", "Std. Error"), 
+          star.char.levels = c(0.01, 0.05, 0.1), 
           digits = 4,
-          style = "default",  # Ensure default styling
-          model.numbers = FALSE)  # Remove model numbers if not needed
+          style = "default",  
+          model.numbers = FALSE)  
 ```
 
 ```{r}
-# Generate LaTeX code with XTable
 
 model_summary <- summary(general_linear_model)$coefficients
 
-# Sorting the summary by p-values (assuming p-values are in the 4th column)
+# Sorting the summary by p-values 
 sorted_model_summary <- model_summary[order(model_summary[, 4]),]
 
-# Convert sorted summary to xtable
+# Convert to xtable
 latex_table <- xtable::xtable(sorted_model_summary)
 
-# Print LaTeX code with four decimal places, without row names and floating option
+# Print LaTeX code with four decimal places
 print(latex_table, include.rownames = TRUE, floating = FALSE, digits = rep(6, ncol(sorted_model_summary)))
