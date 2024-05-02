@@ -177,8 +177,11 @@ top_features <- head(feature_importance, 5)
 # Define the color using RGB values
 custom_color <- rgb(78/255, 54/255, 41/255)
 
-# Create a bar plot of feature importance for the top 5 features using the custom RGB color
-p <- ggplot(top_features, aes(x = reorder(Feature, Importance), y = Importance)) +
+# Assuming 'labels' is a vector containing the labels for the features
+labels <- c("Household Income Pre-tax", "Father Age", "Mother Age", "Race Category", "Mother Voted in November 2020 Eelction")
+
+# Create the plot
+p <- ggplot(top_features, aes(x = reorder(labels, Importance), y = Importance)) +
   geom_bar(stat = "identity", fill = custom_color) + 
   labs(title = "Top 5 Feature Importance in Random Forest Model",
        x = "Feature",
