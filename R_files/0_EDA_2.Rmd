@@ -394,8 +394,8 @@ wave3plot$f3i0k <- factor(wave3plot$f3i0k, labels = c("Yes", "No"))
 
 my_plot <- ggplot(wave3plot, aes(x = f3i0k, fill = f3i0k)) +
   geom_bar(fill = "firebrick3", color = "white") +
-  labs(title = "Are Participants Registered to Vote?",
-       x = "Registered to Vote",
+  labs(title = "Did you Vote in the November 2020 Election?",
+       x = "Voted",
        y = "Count",
        fill = NULL) +
   theme_minimal() +
