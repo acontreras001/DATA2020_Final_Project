@@ -1,0 +1,636 @@
+---
+title: "Exploratory Data Analysis"
+output: pdf_document
+---
+
+# Introduction
+This document presents an exploratory data analysis of the dataset.
+
+## Dependency Setup
+```{r Dependency Setup, inlcude = TRUE}
+
+if (!require("here")) install.packages("here")
+library(here)
+
+# Set current working directory to file location
+setwd(here::here())
+
+#Print current working directory in case not connected to .Rproj file
+print(getwd())
+
+# Define the path to the .renv lockfile within the 'renv' folder
+renv_lockfile <- file.path(getwd(), "renv.lock")
+
+# Activate and restore packages from renv lock file
+#if (!require("renv")) install.packages("renv")
+#renv::restore()
+
+# Use the p_load function to install and load any desired packages that may not 
+# have been in the renv.lock file. Note, if the packages were already in the 
+# renv.lock file, that is okay. `p_load` will not change version number
+
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(renv, rmarkdown,  knitr, tidyverse, reshape2, haven, xtable,
+               gridExtra, broom, car, caret, Metrics, stargazer)
+
+# Update the renv lock file
+#renv::snapshot()
+```
+
+# Data Loading
+```{r}
+
+# Load custom functions
+#source("custom_functions.R")
+
+# load data
+wave1 <- read_dta("~/Desktop/Stat_Learning/Project_Data/Raw_Data/FF_wave1_2020v2.dta")
+wave2 <- read_dta("~/Desktop/Stat_Learning/Project_Data/Raw_Data/FF_wave2_2020v2.dta")
+wave3 <- read_dta("~/Desktop/Stat_Learning/Project_Data/Raw_Data/FF_wave3_2020v2.dta")
+wave4 <- read_dta("~/Desktop/Stat_Learning/Project_Data/Raw_Data/FF_wave4_2020v2.dta")
+wave5 <- read_dta("~/Desktop/Stat_Learning/Project_Data/Raw_Data/FF_wave5_2020v2.dta")
+wave6 <- read_dta("~/Desktop/Stat_Learning/Project_Data/Raw_Data/FF_wave6_2020v2.dta")
+```
+
+# Merge Waves based on Encrypted Family ID
+```{r}
+# https://ffcws.princeton.edu/sites/g/files/toruqf4356/files/year_3_guide.pdf
+
+data <- merge(wave1, wave2, by = "idnum")
+data <- merge(data, wave3, by = "idnum")
+data <- merge(data, wave4, by = "idnum")
+#data <- merge(data, wave5, by = "idnum")
+#data <- merge(data, wave6, by = "idnum")
+
+
+
+#variable_names <- names(data)
+#selected_variables <- grep("^r3", variable_names, value = TRUE)
+#print(selected_variables)
+
+```
+
+# Separate Variables into categories and filter
+```{r}
+
+# Numeric Variables
+numeric_vars <- c("cf3age", "cm3age", "f3l1")
+
+# Race variables of Respondent - variables are one hot encoded
+
+race_vars_nonwave_3  <- c("f1h3", "f2g5", "f4h0c")
+race_vars_wave_3 <- c("r3f13_0", "r3f13_1", "r3f13_2", "r3f13_3", "r3f13_4", "r3f13_5", "r3f13_9")
+hispanic_wave_3 <- c("r3f14")
+
+race_vars <- c(race_vars_nonwave_3, race_vars_wave_3, hispanic_wave_3)
+
+# Binary Variables
+binary_vars <- c("cf3marm", "cf3cohm", "m3i0d", "m3i0e", "m3i0f", "m3i0g", "f3i0k", "m3i0k",
+                 "m3i0i", "f3i0d", "f3i0e", "f3i0f", "f3i0g")
+
+# Multi-categorical Variables
+multi_categorical_vars <- c("f3i2", "m3c41", "f3c41")
+
+# Ordinal Vars
+ordinal_vars <- c()
+
+# Create vector of desired variables - makes it easier to filter
+desired_vars <- c("idnum", numeric_vars, race_vars, binary_vars, ordinal_vars, multi_categorical_vars)
+
+vars_future_analyses <- c("m3i0m", "f3i0l1", "m3i0l1", "f3i0m", "f3i0h")
+
+library(dplyr)
+# Filter out only the numeric variables
+data <- data %>%
+  select(desired_vars)
+
+
+```
+
+# Remove Negative Ages and Incomes from Wave 3
+
+```{r, Numeric Vars}
+# Display the structure of the dataset
+
+# Filter data to remove rows with negative values for age and income
+data <- data %>%
+  filter(if_all(all_of(numeric_vars), ~ . >= 0))
+
+# Summary statistics for numeric variables
+summary(select(data, all_of(numeric_vars)))
+
+```
+
+# Work on Race/Ehtnicity Data which is messy
+
+```{r}
+# New variables for race and Hispanic status
+data$Race_Category <- NA  # Initializes with NA
+data$Hispanic <- as.character(ifelse(data$r3f14 %in% c(-9, -3), NA, factor(data$r3f14, levels = c(0, 1), labels = c("No", "Yes"))))
+
+# Update race category logic to combine "Black" categories
+for (i in 1:nrow(data)) {
+  if (data$f1h3[i] %in% c(-9, -3)) {
+    idx <- which(data[i, race_vars_wave_3] == 1)
+    if (length(idx) > 0) {
+      data$Race_Category[i] <- c("Bi/Multiracial", "White", "Black", "American Indian or Alaska Native", "Asian", "Native Hawaiian or Other Pacific Islander", "Other")[idx]
+    } else {
+      data$Race_Category[i] <- "No Information"
+    }
+  } else {
+    data$Race_Category[i] <- switch(as.character(data$f1h3[i]),
+                                    `1` = "White",
+                                    `2` = "Black",
+                                    `3` = "Asian",
+                                    `4` = "American Indian",
+                                    `5` = "Other",
+                                    `101` = "Hispanic",
+                                    "No Information")
+  }
+}
+data$Race_Category[data$Race_Category == "Black or African American"] <- "Black"
+
+# Update Hispanic status based on better handling of source data
+data$Hispanic <- ifelse(data$r3f14 == -9 | data$r3f14 == -3, "No Information",
+                        ifelse(data$r3f14 == 1, "Yes", "No"))
+data$Hispanic <- factor(data$Hispanic, levels = c("No", "Yes", "No Information"))
+
+# Print to verify
+table(data$Race_Category)
+table(data$Hispanic)
+
+```
+
+```{r}
+# Set Output directory
+output_directory <- "~/Desktop/Stat_Learning/Project_Data/Outputs"
+
+
+```
+
+# Plot the Race/Ethnicity Data
+
+```{r}
+# First, you'll create the contingency table
+data_table <- table(data$Race_Category, data$Hispanic)
+
+# Convert the table to a data frame
+data_frame <- as.data.frame.matrix(data_table)
+
+# Add a race category as a new column
+data_frame$Race_Category <- rownames(data_frame)
+
+# Filter out the 'No Information' category
+filtered_data <- data_frame[data_frame$Race_Category != "No Information", ]
+
+# Melt the filtered data frame to long format for ggplot2
+data_long <- melt(filtered_data, id.vars = "Race_Category")
+
+# Rename columns for clarity
+names(data_long) <- c("Race", "Hispanic_Status", "Count")
+
+# Create the stacked bar chart
+p <- ggplot(data_long, aes(fill = Hispanic_Status, y = Count, x = Race)) +
+  geom_bar(stat = "identity", position = "stack") +
+  labs(title = "Distribution of Race/Ethnicity by Hispanic Identification",
+       x = "Race Category",
+       y = "Count",
+       fill = "Hispanic Status") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) # Rotate x labels for better visibility
+
+
+# Display the plot
+  ggsave(paste0(output_directory, "/race_ethnicity_chart", ".png"), plot = p, width = 10, height = 8, dpi = 300)
+
+```
+
+# Remove messy Race/Ethnicity Variables
+
+```{r}
+
+data <- data %>% 
+  select(-all_of(race_vars))
+
+```
+
+# Cleaning Binary Data
+
+```{r}
+
+# Remove rows which are -1, -2, -3, -4 from vector of binary variables
+data <- data %>%
+  filter(!if_any(all_of(binary_vars), ~ .x == -1)) %>% # -1 Refuse
+  filter(!if_any(all_of(binary_vars), ~ .x == -2)) %>% # -2 Don't Know
+  filter(!if_any(all_of(binary_vars), ~ .x == -3)) %>% # -3 Missing
+  filter(!if_any(all_of(binary_vars), ~ .x == -6))      # -6 Skip
+
+# Vector for variables using 0, 1 encoding for No/Yes
+binary_no_yes_0_1 <- c("cf3marm", "cf3cohm")
+
+# Vector for variables using 1, 2 encoding for Yes/No
+binary_yes_no_1_2 <- c("m3i0d", "m3i0e", "m3i0f", "m3i0g", "m3i0i", "f3i0d", "f3i0e", "f3i0f", "f3i0g", "f3i0k", "m3i0k")
+
+# Recode the variables first
+data <- data %>%
+  mutate(across(all_of(binary_yes_no_1_2), ~ifelse(. == 2, 0, .)))
+
+```
+
+# Remove rows which are -1, -2 from multi-categorical vars
+
+```{r}
+data <- data %>%
+  filter(!if_any(all_of(multi_categorical_vars), ~ .x == -1)) %>% # -1 Refuse
+  filter(!if_any(all_of(multi_categorical_vars), ~ .x == -2)) # -2 Don't Know
+```
+
+```{r}
+var_labels <- c(
+  "cf3marm" = "Father married to child's mother at year three",
+  "cf3cohm" = "Father living with child's mother at year three",
+  "m3i0d" = "Mother: Participated in labor union/work-related group past year",
+  "m3i0e" = "Mother: Participated in community organization past year",
+  "m3i0f" = "Mother: Participated in group working with children past year",
+  "m3i0g" = "Mother: Ever participated in political demonstration",
+  "m3i0i" = "Mother: Registered to vote",
+  "f3i0d" = "Father: Participated in labor union/work-related group past year",
+  "f3i0e" = "Father: Participated in community organization past year",
+  "f3i0f" = "Father: Participated in group working with children past year",
+  "f3i0g" = "Father: Ever participated in political demonstration",
+  "m3i0h" = "Mother: Participated in political demonstration past year",
+  "m3i0j" = "Mother: Eligible to vote",
+  "m3i0k" = "Mother: Voted in November 2000 election",
+  "f3i0h" = "Father: Participated in political demonstration past year",
+  "f3i0i" = "Father: Registered to vote",
+  "f3i0j" = "Father: Eligible to vote",
+  "f3i0k" = "Father: Voted in November 2000 election",
+  "m3i0l1" = "Mother: Importance of voting in elections",
+  "m3i0m" = "Mother: Importance of volunteering time to community service",
+  "f3i0l1" = "Father: Importance of voting in elections",
+  "f3i0m" = "Father: Importance of volunteering time to community service"
+)
+
+
+```
+
+
+# Use the following code chunk to get information on variable value labels
+
+```{r}
+var_vector <- c("var_1", "var_2")
+
+for (var in binary_vars) {
+  labels <- attr(data[[var]], "labels")
+  if (!is.null(labels)) {
+    cat("Variable:", var, "\n")
+    print(labels)
+    cat("\n")
+    print(table(data[[var]]))
+    cat("\n")
+  }
+}
+
+```
+
+
+
+--- Information on Variables Used
+
+**Wave 3 of the Dataset: Political Participation and Civic Engagement Variables**
+
+Mother - 
+- `m3i0d`: "In past year, have you participated in: labor union or work-related group?"
+- `m3i0e`: "In past year, have you participated in: community organization?"
+- `m3i0f`: "In past year, have you participated in: group working with children?"
+- `m3i0g`: "Have you ever participated in a political demonstration?"
+- `m3i0h`: "In past year have you taken part in a political demonstration?"
+- `m3i0i`: "Are you registered to vote?"
+- `m3i0j`: "Are you eligible to vote?"
+- `m3i0k`: "Did you vote in the November 2000 election?"
+
+Father -
+- `f3i0d`: "In past year, have you participated in: labor union or work-related group?"
+- `f3i0e`: "In past year, have you participated in: community organization?"
+- `f3i0f`: "In past year, have you participated in: group working with children?"
+- `f3i0g`: "Have you ever participated in a political demonstration?"
+- `f3i0h`: "In past year have you taken part in a political demonstration?"
+- `f3i0i`: "Are you registered to vote?"
+- `f3i0j`: "Are you eligible to vote?"
+- `f3i0k`: "Did you vote in the November 2000 election?"
+
+**Potential Demographic Control Variables:**
+  - `cf3age`: Age
+  - `r3f13_0`: Bi or multiracial
+  - `r3f13_1`: White or Caucasian
+  - `r3f13_2`: Black or African American
+  - `r3f13_3`: Asian
+  - `r3f13_4`: Native Hawaiian or Pacific Islander
+  - `r3f13_5`: Native American or Alaskan
+  - `r3f13_9`: Other races .
+  - `r3f14`: Asking if the respondent is of Hispanic or Latino origin or descent
+  - `r3f15`: Asking if the respondent is Mexican, Cuban, Puerto Rican, Dominican, or of other specified Hispanic descent
+  - `f3e5`: Which best describes current partner's race?
+  - `f3e5a`: Is current partner of Hispanic or Latino descent?
+  - `f3e5b`: Is he/she Mexican, Puerto Rican, Cuban, or Other Hispanic?
+
+**Potential Socioeconomic Control Variables:**
+  - `cf3edu`: Father's Education Level
+  - `cm3edu`: Mother's Education Level
+  - `f3l1`: Income (total household income before taxes)
+  - `f3i2`: What is your current housing situation?
+  - `f3c41` - Is father currently working, in school, or unemployed
+  - `m3c41` - Is mother currently working, in school, or unemployed
+  - `cf3cohm ` - Father living with child's mother at year three
+  - `cf3marm` - Is father married to child's mother at year three?
+  - `o3p8` - How would you best describe the home or building?
+
+**Variables not in Dataset but in Codebooks**
+
+- `m3i0l1`: "How important is it: to vote in elections?"
+- `m3i0m` : "How important is it to volunteer time to community service?"
+- `f3i0l1`: "How important is it: to vote in elections?"
+- `f3i0m` : "How important is it to volunteer time to community service?"
+
+---
+
+# Data Cleaning and Overview
+
+```{r, }
+
+# Count levels for categorical variables (including binary and ordinal)
+sapply(data[, c(binary_vars, ordinal_vars, multi_categorical_vars)], function(x) list(levels = levels(as.factor(x))))
+
+```
+
+# Data Cleaning 
+```{r}
+# Handling missing values
+data <- data %>%
+  mutate_at(vars(all_of(c(numeric_vars, binary_vars, ordinal_vars, multi_categorical_vars))),
+            ~ifelse(is.na(.), median(., na.rm = TRUE), .))
+
+# Converting binary variables to factor
+data[binary_vars] <- lapply(data[binary_vars], factor)
+
+# Converting ordinal variables to ordered factor
+#data[ordinal_vars] <- lapply(data[ordinal_vars], function(x) factor(x, ordered = TRUE))
+
+
+```
+
+
+
+# Registered to Vote
+```{r}
+data <- data[data$f3i0i != "Don't Know", ]
+
+data$f3i0i <- factor(data$f3i0i, labels = c("Yes", "No"))
+
+my_plot <- ggplot(data, aes(x = f3i0i, fill = f3i0i)) +
+  geom_bar(fill = "firebrick3", color = "white") +
+  labs(title = "Are Participants Registered to Vote?",
+       x = "Registered to Vote",
+       y = "Count",
+       fill = NULL) +
+  theme_minimal() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        axis.line = element_line(color = "black", size = 0.5),
+        axis.ticks = element_blank(),
+        axis.title = element_text(size = 12),
+        plot.title = element_text(hjust = 0.5, size = 16, face = "bold"))
+
+my_plot
+
+#print(my_plot)
+ggsave(file.path(output_directory, "voting_intent_plot.png"), plot = my_plot)
+
+```
+# Father's Age
+```{r}
+data$cf3age_sqrt <- sqrt(data$cf3age)
+
+# Define the plot as a histogram of the transformed variable
+my_plot <- ggplot(data, aes(x = cf3age_sqrt)) +
+  geom_histogram(fill = "firebrick3", color = "white", bins = 20) +
+  labs(title = "Distribution of Father's Age",
+       x = "Square Root of Father's Age",
+       y = "Count") + 
+  theme_minimal() +
+   theme(panel.grid.major = element_line(color = "lightgray", size = 0.5), 
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(color = "black", size = 0.5),
+        axis.title = element_text(size = 12),
+        plot.title = element_text(hjust = 0.5, size = 16, face = "bold"))
+
+my_plot
+ggsave(file.path(output_directory, "father_age_transformed.png"), plot = my_plot)
+
+my_plot <- ggplot(data, aes(x = cf3age)) +
+  geom_histogram(fill = "firebrick3", color = "white", bins = 30) +
+  labs(title = "Distribution of Father's Age",
+       x = "Father's Age",
+       y = "Count") + 
+  theme_minimal() +
+   theme(panel.grid.major = element_line(color = "lightgray", size = 0.5), 
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(color = "black", size = 0.5),
+        axis.title = element_text(size = 12),
+        plot.title = element_text(hjust = 0.5, size = 16, face = "bold"))
+
+my_plot
+ggsave(file.path(output_directory, "father_age.png"), plot = my_plot)
+```
+# Mother's Age
+```{r}
+data$cm3age_sqrt <- sqrt(data$cm3age)
+
+my_plot <- ggplot(data, aes(x = cm3age_sqrt)) +
+  geom_histogram(fill = "firebrick3", color = "white", bins = 20) +
+  labs(title = "Distribution of Mother's Age",
+       x = "Square Root of Mothers's Age",
+       y = "Count") + 
+  theme_minimal() +
+  theme(panel.grid.major = element_line(color = "lightgray", size = 0.5), 
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(color = "black", size = 0.5),
+        axis.title = element_text(size = 12),
+        plot.title = element_text(hjust = 0.5, size = 16, face = "bold"))
+
+my_plot
+ggsave(file.path(output_directory, "mother_age_transformed.png"), plot = my_plot)
+
+
+my_plot <- ggplot(data, aes(x = cm3age)) +
+  geom_histogram(fill = "firebrick3", color = "white", bins = 20) +
+  labs(title = "Distribution of Mother's Age",
+       x = "Mothers's Age",
+       y = "Count") + 
+  theme_minimal() +
+  theme(panel.grid.major = element_line(color = "lightgray", size = 0.5), 
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(color = "black", size = 0.5),
+        axis.title = element_text(size = 12),
+        plot.title = element_text(hjust = 0.5, size = 16, face = "bold"))
+
+my_plot
+ggsave(file.path(output_directory, "mother_age.png"), plot = my_plot)
+```
+# Income histogram, sqrt transformed
+```{r}
+#f3l1
+data$f3l1_sqrt <- sqrt(data$f3l1)
+
+my_plot <- ggplot(data, aes(x = f3l1_sqrt)) +
+  geom_histogram(fill = "firebrick3", color = "white", bins = 25) +
+  labs(title = "Distribution of Income",
+       x = "Square Root of Total Income Before Taxes (USD)",
+       y = "Count") + 
+  theme_minimal() +
+  theme(panel.grid.major = element_line(color = "lightgray", size = 0.5), 
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(color = "black", size = 0.5),
+        axis.title = element_text(size = 12),
+        plot.title = element_text(hjust = 0.5, size = 16, face = "bold"))
+
+my_plot
+ggsave(file.path(output_directory, "income_transformed.png"), plot = my_plot)
+```
+# Income histogram, not transformed and log transformed
+```{r}
+#f3l1
+
+my_plot <- ggplot(data, aes(x = f3l1)) +
+  geom_histogram(fill = "firebrick3", color = "white", bins = 40) +
+  labs(title = "Distribution of Income",
+       x = "Total Income Before Taxes (USD)",
+       y = "Count") + 
+  theme_minimal() +
+  theme(panel.grid.major = element_line(color = "lightgray", size = 0.5), 
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(color = "black", size = 0.5),
+        axis.title = element_text(size = 12),
+        plot.title = element_text(hjust = 0.5, size = 16, face = "bold"))
+
+my_plot
+ggsave(file.path(output_directory, "income_distrib.png"), plot = my_plot)
+
+my_plot <- ggplot(data, aes(x = f3l1_log)) +
+  geom_histogram(fill = "firebrick3", color = "white", bins = 25) +
+  labs(title = "Distribution of Income",
+       x = "Log Total Income Before Taxes (USD)",
+       y = "Count") + 
+  theme_minimal() +
+  theme(panel.grid.major = element_line(color = "lightgray", size = 0.5), 
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(color = "black", size = 0.5),
+        axis.title = element_text(size = 12),
+        plot.title = element_text(hjust = 0.5, size = 16, face = "bold"))
+
+my_plot
+ggsave(file.path(output_directory, "income_distrib_log.png"), plot = my_plot)
+```
+
+# Income boxplot, sqrt and log transformed
+```{r}
+
+my_plot <- ggplot(data, aes(y = f3l1_sqrt)) +
+  geom_boxplot(fill = "firebrick3", color = "black") +  
+  labs(title = "Distribution of Total Income Before Taxes",
+       y = "Sqrt Total Income Before Taxes",  
+       x = "") +  
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+my_plot
+
+ggsave(file.path(output_directory, "income_distrib_boxplot_sqrt.png"), plot = my_plot)
+
+my_plot <- ggplot(data, aes(y = f3l1_log)) +
+  geom_boxplot(fill = "firebrick3", color = "black") +  
+  labs(title = "Distribution of Total Income Before Taxes",
+       y = "Log Total Income Before Taxes",  
+       x = "") +  
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+my_plot
+
+ggsave(file.path(output_directory, "income_distrib_boxplot_log.png"), plot = my_plot)
+
+```
+# Income boxplot, not transformed
+```{r}
+my_plot <- ggplot(data, aes(y = f3l1)) +
+  geom_boxplot(fill = "firebrick3", color = "black") +  
+  labs(title = "Distribution of Total Income Before Taxes",
+       y = "Total Income Before Taxes",  
+       x = "") +  
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+my_plot
+
+ggsave(file.path(output_directory, "income_distrib_boxplot.png"), plot = my_plot)
+
+```
+
+
+
+# Race Plot
+```{r}
+p <- ggplot(data_long, aes(fill = Hispanic_Status, y = Count, x = Race)) +
+  geom_bar(stat = "identity", position = "stack") +
+  labs(title = "Distribution of Race/Ethnicity by Hispanic Identification",
+       x = "Race Category",
+       y = "Count",
+       fill = "Hispanic Status") +
+  theme_minimal() +
+  scale_fill_manual(values = c("Yes" = "green4", "No" = "firebrick3", "No information" = "grey")) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        axis.line = element_line(color = "black", size = 0.5),
+        axis.title = element_text(size = 12),
+        plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+        axis.text.x = element_text(angle = 45, hjust = 1))
+
+#print(p)
+ggsave(file.path(output_directory, "race_plot.png"), plot =p)
+```
+
+# Important to Vote Plot
+```{r}
+wave3plot <- read_dta("~/Desktop/Stat_Learning/Project_Data/Raw_Data/FF_wave3_2020v2.dta")
+wave3plot <- wave3plot[!(wave3plot$f3i0l1 %in% c(-9, -8, -7, -6, -5, -4, -3, -2, -1)), ]
+
+unique_values <- unique(wave3plot$f3i0l1)
+print(unique_values)
+
+#wave3plot$f3i0l1
+```
+# Important to Vote Plot
+```{r}
+#wave3plot$f3i0l1 <- factor(wave3plot$f3i0l1 , 
+     #                         levels = c(1, 2, 3), 
+      #                        labels = c("Very Important", "Somewhat Important", "Not Important"))
+
+my_plot <- ggplot(wave3plot, aes(x = f3i0l1, fill = f3i0l1)) +
+  geom_bar(fill = "firebrick3", color = "white") +
+  labs(title = "Is It Important to Vote?",
+       x = "Response",
+       y = "Count") + 
+  theme_minimal() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        axis.line = element_line(color = "black", size = 0.5),
+        axis.ticks = element_blank(),
+        axis.title = element_text(size = 12),
+        plot.title = element_text(hjust = 0.5, size = 16, face = "bold"))
+
+print(my_plot)
+# Save the plot
+ggsave(file.path(output_directory, "important_to_vote_plot.png"), plot = my_plot)
+```
+
+
+
+
+
