@@ -332,8 +332,8 @@ data <- data %>%
     mother_part_community_org = m3i0e,
     mother_part_children_group = m3i0f,
     mother_political_demonstration = m3i0g,
-    father_vote_nov2000 = f3i0k,
-    mother_vote_nov2000 = m3i0k,
+    father_vote_nov2020 = f3i0k,
+    mother_vote_nov2020 = m3i0k,
     #mother_registered_to_vote = m3i0i,
     father_par_labor_union = f3i0d,
     father_par_community_org = f3i0e,
@@ -348,7 +348,7 @@ data <- data %>%
 
 numeric_vars <- c("father_age", "mother_age", "household_income_pre_tax")
 binary_vars <- c("father_married_to_mother", "father_living_with_mother", "mother_part_labor_union", "mother_part_community_org", 
-                 "mother_part_children_group", "mother_political_demonstration", "father_vote_nov2000", "mother_vote_nov2000",
+                 "mother_part_children_group", "mother_political_demonstration", "father_vote_nov2020", "mother_vote_nov2020",
                  "father_par_labor_union", "father_par_community_org", "father_par_children_group", "father_political_demonstration")
 multi_categorical_vars <- c("current_housing_situation", "mother_current_employment_status", "father_current_employment_status")
 race_vars <- c("race_category", "hispanic_origin")
@@ -365,59 +365,94 @@ data <- data %>%
 # Exploratory Data Analysis - Numeric Variables
 ```{r}
 
+# Define variable labels
+variable_labels <- setNames(
+  c("Father's Age", "Mother's Age", "Household Income (Pre-Tax)"),
+  c("father_age", "mother_age", "household_income_pre_tax")
+)
+
+# You can view the labels by printing the variable_labels
+print(variable_labels)
+
 output_directory <- file.path(getwd(), "outputs/EDA/numeric_vars")
 
+# Loop through each numeric variable to generate and save histograms
 for(var in numeric_vars) {
   # Generating histogram for each variable
   p <- data %>%
     select(all_of(var)) %>%
     ggplot(aes(x = .data[[var]])) +
     geom_histogram(bins = 30, fill = "blue", color = "black") +
-    ggtitle(paste("Histogram of", var))  
+    ggtitle(paste("Histogram of", variable_labels[[var]]))  # Use correct variable_labels for title
   ggsave(paste0(output_directory, "/histogram_", var, ".png"), plot = p, width = 10, height = 8, dpi = 300)
 }
 
-# Loop through each numeric variable to generate and save boxplot
+# Loop through each numeric variable to generate and save boxplots
 for(var in numeric_vars) {
   # Generating boxplot for each variable
   p <- data %>%
     select(all_of(var)) %>%
-    ggplot(aes(x = var, y = .data[[var]])) +
+    ggplot(aes(x = 1, y = .data[[var]])) +  # Use a constant x to ensure a single boxplot per plot
     geom_boxplot() +
-    ggtitle(paste("Boxplot of", var)) 
+    ggtitle(paste("Boxplot of", variable_labels[[var]]))  # Use correct variable_labels for title
   ggsave(paste0(output_directory, "/boxplot_", var, ".png"), plot = p, width = 10, height = 8, dpi = 300)
 }
+
 
 ```
 
 # Exploratory Data Analysis - Binary Variables Visualizations
 
 ```{r}
+# Assuming binary_vars and its corresponding labels vector are defined
+binary_vars <- c("father_married_to_mother", "father_living_with_mother", 
+                 "mother_part_labor_union", "mother_part_community_org", 
+                 "mother_part_children_group", "mother_political_demonstration", 
+                 "father_vote_nov2020", "mother_vote_nov2020",
+                 "father_par_labor_union", "father_par_community_org", 
+                 "father_par_children_group", "father_political_demonstration")
+
+# Define a vector of labels for these variables
+labels <- c("Father Married to Mother", "Father Living with Mother",
+            "Mother Participates in Labor Union", "Mother Participates in Community Organization",
+            "Mother Participates in Children's Group", "Mother Participates in Political Demonstrations",
+            "Father Voted in November 2020 Election", "Mother Voted in November 2020 Election",
+            "Father Participates in Labor Union", "Father Participates in Community Organization",
+            "Father Participates in Children's Group", "Father Participates in Political Demonstrations")
+
+# Use setNames to apply labels to the binary_vars vector
+binary_var_labels <- setNames(binary_vars, labels)
+
+# Define the output directory
 output_directory <- file.path(getwd(), "outputs/EDA/binary_vars")
 
-# Bar plots for categorical variables
-p <- data %>%
-  select(all_of(c(binary_vars))) %>%
-  gather() %>%
-  ggplot(aes(x = value)) +
-  geom_bar() +
-  facet_wrap(~key, scales = "free")
+print(output_directory)
 
-  # Saving the plot
-  ggsave(paste0(output_directory, "/barplots_binary_vars", ".png"), plot = p, width = 10, height = 8, dpi = 300)
+# Create a labeller function to use labels
+#name_labeller <- as_labeller(binary_labels)
 
-# Loop through each variable to create and save a separate plot
-for(var in binary_vars) {
+# # Bar plots for all categorical variables in one figure with facets
+# p <- data %>%
+#   select(all_of(binary_vars)) %>%
+#   pivot_longer(cols = everything(), names_to = "variable", values_to = "value") %>%
+#   ggplot(aes(x = value)) +
+#   geom_bar() +
+#   facet_wrap(~variable, scales = "free", labeller = name_labeller)  # Applying custom labels
+# 
+# # Save the combined plot
+# ggsave(paste0(output_directory, "/barplots_binary_vars.png"), plot = p, width = 10, height = 8, dpi = 300)
+
+for(var in names(binary_vars)) {
   p <- data %>%
     select(all_of(var)) %>%
     gather() %>%
     ggplot(aes(x = value)) +
     geom_bar() +
-    labs(title = paste("Bar Plot of", var), x = var, y = "Count") +
+    labs(title = paste("Bar Plot of", binary_var_labels[var]), x = binary_var_labels[var], y = "Count") +
     theme_minimal()
   
-  # Saving each plot with a unique filename based on the variable name
-  ggsave(paste0(output_directory, "/barplot_", var, ".png"), plot = p, width = 10, height = 8, dpi = 300)
+  # Saving each plot with a unique filename based on the variable label
+  ggsave(paste0(output_directory, "/barplot_", gsub(" ", "_", binary_var_labels[var]), ".png"), plot = p, width = 10, height = 8, dpi = 300)
 }
 ```
 
