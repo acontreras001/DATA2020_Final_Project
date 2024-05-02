@@ -379,7 +379,37 @@ data[binary_vars] <- lapply(data[binary_vars], factor)
 
 ```
 
+# Distribution of Target Variable
+```{r}
+#wave3plot <- wave3plot[!(wave3plot$f3i0k %in% c(-6, -2, -1)), ]
 
+unique_values <- unique(wave3plot$f3i0k)
+print(unique_values)
+```
+
+```{r}
+#f3i0k
+
+wave3plot$f3i0k <- factor(wave3plot$f3i0k, labels = c("Yes", "No"))
+
+my_plot <- ggplot(wave3plot, aes(x = f3i0k, fill = f3i0k)) +
+  geom_bar(fill = "firebrick3", color = "white") +
+  labs(title = "Did you Vote in the November 2020 Election?",
+       x = "Voted",
+       y = "Count",
+       fill = NULL) +
+  theme_minimal() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        axis.line = element_line(color = "black", size = 0.5),
+        axis.ticks = element_blank(),
+        axis.title = element_text(size = 12),
+        plot.title = element_text(hjust = 0.5, size = 16, face = "bold"))
+
+my_plot
+
+ggsave(file.path(output_directory, "target_variable.png"), plot = my_plot)
+
+```
 
 # Registered to Vote
 ```{r}
