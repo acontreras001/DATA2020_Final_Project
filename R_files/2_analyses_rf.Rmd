@@ -44,6 +44,21 @@ renv::snapshot()
 # Load the dataset
 dataset <- readr::read_csv("data/processed/EDA_output.csv")
 
+dataset
+
+```
+
+# Check that all rows are unique
+
+```{r}
+duplicates <- duplicated(dataset) | duplicated(dataset, fromLast = TRUE)
+
+# Extract the rows that are duplicated
+duplicate_rows <- dataset[duplicates, ]
+
+# View the duplicate rows
+print(duplicate_rows)
+
 ```
 
 # Preprocess the data
@@ -55,11 +70,11 @@ dataset <- select(dataset, -participant_id)
 dataset <- na.omit(dataset)                  
 
 # Ensure the target variable is a factor
-dataset$father_vote_nov2000 <- as.factor(dataset$father_vote_nov2000)
+dataset$father_vote_nov2020 <- as.factor(dataset$father_vote_nov2020)
 
 # Prepare data
-response <- dataset$father_vote_nov2000
-features <- select(dataset, -father_vote_nov2000)
+response <- dataset$father_vote_nov2020
+features <- select(dataset, -father_vote_nov2020)
 
 ```
 
@@ -90,6 +105,29 @@ classification_error <- (total_predictions - correct_predictions) / total_predic
 # Print classification error
 print(paste("Classification Error:", classification_error))
 ```
+
+
+# Random Forest with Cross Valedation
+
+```{r}
+library(caret)
+# Define training control
+#train_control <- trainControl(method = "cv", number = 10)  # 10-fold cross-validation
+
+# Train the model using cross-validation
+#rf_model_cv <- train(response ~ ., data=features, method="rf", 
+#                     trControl=train_control, ntree=500, importance=TRUE)
+
+# Print model summary
+#print(rf_model_cv)
+
+# Run the random forest model with OOB error estimation
+rf_model <- randomForest(response ~ ., data=features, ntree=500, importance=TRUE, keep.inbag=TRUE)
+
+# OOB error
+print(rf_model$err.rate)
+```
+
 
 # Print out the feature importance
 

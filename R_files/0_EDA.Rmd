@@ -568,7 +568,7 @@ Mother -
 - `m3i0h`: "In past year have you taken part in a political demonstration?"
 - `m3i0i`: "Are you registered to vote?"
 - `m3i0j`: "Are you eligible to vote?"
-- `m3i0k`: "Did you vote in the November 2000 election?"
+- `m3i0k`: "Did you vote in the November 2020 election?"
 
 Father -
 - `f3i0d`: "In past year, have you participated in: labor union or work-related group?"
@@ -578,7 +578,7 @@ Father -
 - `f3i0h`: "In past year have you taken part in a political demonstration?"
 - `f3i0i`: "Are you registered to vote?"
 - `f3i0j`: "Are you eligible to vote?"
-- `f3i0k`: "Did you vote in the November 2000 election?"
+- `f3i0k`: "Did you vote in the November 2020 election?"
 
 **Potential Demographic Control Variables:**
   - `cf3age`: Age
@@ -637,11 +637,11 @@ var_labels <- c(
   "f3i0g" = "Father: Ever participated in political demonstration",
   "m3i0h" = "Mother: Participated in political demonstration past year",
   "m3i0j" = "Mother: Eligible to vote",
-  "m3i0k" = "Mother: Voted in November 2000 election",
+  "m3i0k" = "Mother: Voted in November 2020 election",
   "f3i0h" = "Father: Participated in political demonstration past year",
   "f3i0i" = "Father: Registered to vote",
   "f3i0j" = "Father: Eligible to vote",
-  "f3i0k" = "Father: Voted in November 2000 election",
+  "f3i0k" = "Father: Voted in November 2020 election",
   "m3i0l1" = "Mother: Importance of voting in elections",
   "m3i0m" = "Mother: Importance of volunteering time to community service",
   "f3i0l1" = "Father: Importance of voting in elections",

@@ -56,7 +56,7 @@ df <- df %>%
 
 numeric_vars <- c("father_age", "mother_age", "household_income_pre_tax")
 binary_vars <- c("father_married_to_mother", "father_living_with_mother", "mother_part_labor_union", "mother_part_community_org", 
-                 "mother_part_children_group", "mother_political_demonstration", "father_vote_nov2000", "mother_vote_nov2000",
+                 "mother_part_children_group", "mother_political_demonstration", "father_vote_nov2020", "mother_vote_nov2020",
                 "father_par_labor_union", "father_par_community_org", "father_par_children_group", "father_political_demonstration")
 #multi_categorical_vars <- c("current_housing_situation", "mother_current_employment_status", "father_current_employment_status")
 multi_categorical_vars <- c()
@@ -228,7 +228,7 @@ create_calibration_plot <- function(data, dep_var, output_file) {
 
 ```{r}
 
-dep_var <- "father_vote_nov2000"
+dep_var <- "father_vote_nov2020"
 all_vars <- c(numeric_vars, binary_vars, multi_categorical_vars, race_vars) # define these variables as needed
 indep_vars <- setdiff(all_vars, dep_var)
 
@@ -249,6 +249,53 @@ summary(general_linear_model)
 
 ```
 
+
+```{r}
+# Predicted class labels
+threshold <- 0.5
+predicted_labels <- ifelse(glm_df$predicted_prob > threshold, 1, 0)
+
+# Extract actual class labels
+actual_labels <- glm_df[[dep_var]]
+
+# Calculate accuracy
+accuracy <- mean(predicted_labels == actual_labels)
+print(paste("Accuracy of the model:", accuracy))
+
+# Optional: Detailed performance analysis
+library(caret)
+confusionMatrix(as.factor(predicted_labels), as.factor(actual_labels))
+```
+
+
+```{r}
+library(boot)
+
+# Check multicollinearity
+vif_values <- vif(general_linear_model)
+print(vif_values)
+
+# Cross-validation
+train_control <- trainControl(method = "cv", number = 10, classProbs = TRUE, savePredictions = "final")
+
+# Fitting with cross-validation
+model_cv <- train(formula = glm_formula, data = glm_df, method = "glm", family = binomial(), trControl = train_control, preProcess = "scale")
+print(model_cv)
+
+# Bootstrap resampling
+boot_function <- function(data, indices) {
+  data <- data[indices, ]
+  fit <- glm(formula = glm_formula, data = data, family = binomial())
+  predictions <- predict(fit, data, type = "response")
+  labels <- ifelse(predictions > 0.5, 1, 0)
+  mean(labels == data[[dep_var]])
+}
+
+boot_results <- boot(data = df, statistic = boot_function, R = 1000)
+print(boot_results)
+```
+
+
 ```{r}
 # Generate LaTeX code with stargazer
 stargazer::stargazer(general_linear_model, type = "latex",
@@ -265,11 +312,22 @@ stargazer::stargazer(general_linear_model, type = "latex",
 
 model_summary <- summary(general_linear_model)$coefficients
 
-# Sorting the summary by p-values 
-sorted_model_summary <- model_summary[order(model_summary[, 4]),]
+# Filtering for significant variables based on p-value threshold (e.g., p < 0.05)
+significant_vars <- model_summary[model_summary[, 4] < 0.05, ]
+
+# Sorting the significant variables by p-values 
+sorted_model_summary <- significant_vars[order(significant_vars[, 4]),]
 
 # Convert to xtable
 latex_table <- xtable::xtable(sorted_model_summary)
 
 # Print LaTeX code with four decimal places
 print(latex_table, include.rownames = TRUE, floating = FALSE, digits = rep(6, ncol(sorted_model_summary)))
+```
+
+
+
+
+
+
+
