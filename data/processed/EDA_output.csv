@@ -1,4 +1,4 @@
-"participant_id","father_age","mother_age","household_income_pre_tax","father_married_to_mother","father_living_with_mother","mother_part_labor_union","mother_part_community_org","mother_part_children_group","mother_political_demonstration","father_vote_nov2000","mother_vote_nov2000","father_par_labor_union","father_par_community_org","father_par_children_group","father_political_demonstration","race_category","hispanic_origin"
+"participant_id","father_age","mother_age","household_income_pre_tax","father_married_to_mother","father_living_with_mother","mother_part_labor_union","mother_part_community_org","mother_part_children_group","mother_political_demonstration","father_vote_nov2020","mother_vote_nov2020","father_par_labor_union","father_par_community_org","father_par_children_group","father_political_demonstration","race_category","hispanic_origin"
 "0001",32,29,55000,0,1,0,0,1,0,1,1,0,0,0,0,"Black","No Information"
 "0003",29,26,150000,0,1,0,0,0,0,1,1,0,0,0,0,"White","No Information"
 "0009",28,27,50000,0,0,0,0,1,1,0,0,0,0,0,0,"American Indian","No Information"

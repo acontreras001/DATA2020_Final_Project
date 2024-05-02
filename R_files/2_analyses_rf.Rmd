@@ -121,6 +121,42 @@ ggsave(paste0(output_directory, "/random_forest_feature_importance", ".png"), pl
 
 ```
 
+# Create Plot with only top 5 most improtant features
+
+```{r}
+# Print out the feature importance
+
+importance_data <- importance(rf_model)
+feature_importance <- data.frame(
+  Feature = rownames(importance_data),
+  Importance = importance_data[, "MeanDecreaseGini"]
+)
+
+# Sort features by importance and select the top 5
+feature_importance <- feature_importance[order(-feature_importance$Importance), ]
+top_features <- head(feature_importance, 5)
+
+# Define the color using RGB values
+custom_color <- rgb(78/255, 54/255, 41/255)
+
+# Create a bar plot of feature importance for the top 5 features using the custom RGB color
+p <- ggplot(top_features, aes(x = reorder(Feature, Importance), y = Importance)) +
+  geom_bar(stat = "identity", fill = custom_color) + 
+  labs(title = "Top 5 Feature Importance in Random Forest Model",
+       x = "Feature",
+       y = "Importance (Gini Decrease)") +
+  coord_flip() +  
+  theme_minimal() +
+  theme(axis.text.y = element_text(angle = 0, size = 16))
+
+output_directory <- file.path(getwd(), "outputs/analysis_rf")
+
+# Saving each plot
+ggsave(paste0(output_directory, "/top_5_random_forest_feature_importance", ".png"), plot = p, width = 10, height = 8, dpi = 300)
+
+
+```
+
 # Export the RandomForest Results as LaTeX code
 
 ```{r}
